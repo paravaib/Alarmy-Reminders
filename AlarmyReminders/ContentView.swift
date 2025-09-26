@@ -300,7 +300,7 @@ struct AlarmAddView: View {
         VStack(alignment: .leading, spacing: 12) {
             Toggle("Countdown Timer", systemImage: "timer", isOn: $userInput.preAlertEnabled)
                 .font(.headline)
-                .toggleStyle(SwitchToggleStyle(tint: .accent))
+                .toggleStyle(SwitchToggleStyle(tint: Color.accentColor))
             
             if userInput.preAlertEnabled {
                 VStack(alignment: .leading, spacing: 8) {
@@ -328,7 +328,7 @@ struct AlarmAddView: View {
         VStack(alignment: .leading, spacing: 12) {
             Toggle("Schedule Time", systemImage: "calendar", isOn: $userInput.scheduleEnabled)
                 .font(.headline)
-                .toggleStyle(SwitchToggleStyle(tint: .accent))
+                .toggleStyle(SwitchToggleStyle(tint: Color.accentColor))
             
             if userInput.scheduleEnabled {
                 VStack(alignment: .leading, spacing: 12) {
@@ -379,7 +379,7 @@ struct AlarmAddView: View {
                 .foregroundStyle(userInput.isSelected(day: weekday) ? .white : .primary)
                 .background(
                     Circle()
-                        .fill(userInput.isSelected(day: weekday) ? Color.accentColor : Color(UIColor.quaternarySystemFill))
+                        .fill(userInput.isSelected(day: weekday) ? Color.accentColor : Color(.quaternarySystemFill))
                 )
                 .buttonStyle(.plain)
             }
