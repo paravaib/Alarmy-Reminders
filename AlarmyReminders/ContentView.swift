@@ -7,12 +7,24 @@ struct ContentView: View {
     
     var body: some View {
         NavigationStack {
-            content
-                .navigationTitle("Alarmy Reminders")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
+            ZStack {
+                // Background gradient
+                LinearGradient(
+                    colors: [Color(.systemBackground), Color(.systemBackground).opacity(0.8)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                
+                content
+            }
+            .navigationTitle("Alarmy Reminders")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
                     menuButton
                 }
+            }
         }
         .sheet(isPresented: $showAddSheet) {
             AlarmAddView()
@@ -30,31 +42,35 @@ struct ContentView: View {
             Button {
                 viewModel.scheduleAlertOnlyExample()
             } label: {
-                Label("Alert only", systemImage: "bell.circle.fill")
+                Label("Quick Alert", systemImage: "bell.circle.fill")
             }
             
             // Schedules an alarm with a countdown button.
             Button {
                 viewModel.scheduleCountdownAlertExample()
             } label: {
-                Label("With Countdown", systemImage: "fitness.timer.fill")
+                Label("Countdown Timer", systemImage: "timer.circle.fill")
             }
             
             // Schedules an alarm with a custom button to launch the app.
             Button {
                 viewModel.scheduleCustomButtonAlertExample()
             } label: {
-                Label("With Custom Button", systemImage: "alarm")
+                Label("Custom Alert", systemImage: "alarm.fill")
             }
+            
+            Divider()
             
             // Displays a sheet with configuration options for a new alarm.
             Button {
                 showAddSheet.toggle()
             } label: {
-                Label("Configure", systemImage: "pencil.and.scribble")
+                Label("Create New Reminder", systemImage: "plus.circle.fill")
             }
         } label: {
-            Image(systemName: "plus")
+            Image(systemName: "plus.circle.fill")
+                .font(.title2)
+                .foregroundStyle(.accentColor)
         }
     }
     
@@ -62,20 +78,66 @@ struct ContentView: View {
         if viewModel.hasUpcomingAlerts {
             alarmList(alarms: Array(viewModel.alarmsMap.values))
         } else {
-            ContentUnavailableView("No Reminders", systemImage: "clock.badge.exclamationmark", description: Text("Add a new reminder by tapping + button."))
+            VStack(spacing: 24) {
+                Spacer()
+                
+                VStack(spacing: 16) {
+                    Image(systemName: "clock.badge.checkmark")
+                        .font(.system(size: 80))
+                        .foregroundStyle(.accentColor.opacity(0.6))
+                    
+                    VStack(spacing: 8) {
+                        Text("No Active Reminders")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        Text("Create your first reminder to get started")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                
+                Button {
+                    showAddSheet.toggle()
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Create Reminder")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 25)
+                            .fill(.accentColor)
+                    )
+                }
+                .buttonStyle(.plain)
+                
+                Spacer()
+            }
+            .padding()
         }
     }
     
     func alarmList(alarms: [ViewModel.AlarmsMap.Value]) -> some View {
-        List {
-            ForEach(alarms, id: \.0.id) { (alarm, label) in
-                AlarmCell(alarm: alarm, label: label)
-            }
-            .onDelete { indexSet in
-                indexSet.forEach { idx in
-                    viewModel.unscheduleAlarm(with: alarms[idx].0.id)
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(alarms, id: \.0.id) { (alarm, label) in
+                    AlarmCell(alarm: alarm, label: label)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                viewModel.unscheduleAlarm(with: alarm.id)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                 }
             }
+            .padding(.horizontal)
+            .padding(.top, 8)
         }
     }
 }
@@ -85,33 +147,71 @@ struct AlarmCell: View {
     var label: LocalizedStringResource
     
     var body: some View {
-        VStack(alignment: .leading) {
-            HStack {
+        HStack(spacing: 16) {
+            // Time/Countdown Display
+            VStack(alignment: .leading, spacing: 4) {
                 if let alertingTime = alarm.alertingTime {
                     Text(alertingTime, style: .time)
-                        .font(.title)
-                        .fontWeight(.medium)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.primary)
                 } else if let countdown = alarm.countdownDuration?.preAlert {
                     Text(countdown.customFormatted())
-                        .font(.title)
-                        .fontWeight(.medium)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.primary)
                 }
-                Spacer()
-                tag
+                
+                Text(label)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             
-            Text(label)
-                .font(.headline)
+            Spacer()
+            
+            // Status Indicator
+            VStack(spacing: 8) {
+                statusIcon
+                statusTag
+            }
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.regularMaterial)
+                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+        )
     }
     
-    var tag: some View {
+    var statusIcon: some View {
+        Image(systemName: statusIconName)
+            .font(.title2)
+            .foregroundStyle(statusColor)
+    }
+    
+    var statusTag: some View {
         Text(tagLabel)
+            .font(.caption)
+            .fontWeight(.semibold)
             .textCase(.uppercase)
-            .font(.caption.bold())
-            .padding(4)
-            .background(tagColor)
-            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(statusColor)
+            )
+    }
+    
+    var statusIconName: String {
+        switch alarm.state {
+        case .scheduled: "clock"
+        case .countdown: "timer"
+        case .paused: "pause.circle"
+        case .alerting: "bell.fill"
+        @unknown default: "questionmark"
+        }
     }
     
     var tagLabel: String {
@@ -120,15 +220,15 @@ struct AlarmCell: View {
         case .countdown: "Running"
         case .paused: "Paused"
         case .alerting: "Alert"
-        @unknown default: "!"
+        @unknown default: "Unknown"
         }
     }
     
-    var tagColor: Color {
+    var statusColor: Color {
         switch alarm.state {
         case .scheduled: .blue
         case .countdown: .green
-        case .paused: .yellow
+        case .paused: .orange
         case .alerting: .red
         @unknown default: .gray
         }
@@ -143,29 +243,36 @@ struct AlarmAddView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                textfield
-                countdownSection
-                scheduleSection
-                secondaryButtonSection
+            ZStack {
+                // Background
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 20) {
+                        textfield
+                        countdownSection
+                        scheduleSection
+                        secondaryButtonSection
+                    }
+                    .padding()
+                }
             }
-            .navigationTitle("Add Reminder")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Create Reminder")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
+                    Button("Cancel") {
                         dismiss()
-                    } label: {
-                        Text("Cancel")
                     }
+                    .foregroundStyle(.secondary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
+                    Button("Create") {
                         viewModel.scheduleAlarm(with: userInput)
                         dismiss()
-                    } label: {
-                        Text("Add")
                     }
+                    .fontWeight(.semibold)
                     .disabled(!userInput.isValidAlarm)
                 }
             }
@@ -173,37 +280,89 @@ struct AlarmAddView: View {
     }
     
     var textfield: some View {
-        Label(title: {
-            TextField("Label", text: $userInput.label)
-        }, icon: {
-            Image(systemName: "character.cursor.ibeam")
-        })
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Reminder Label", systemImage: "text.cursor")
+                .font(.headline)
+                .foregroundStyle(.primary)
+            
+            TextField("Enter reminder name", text: $userInput.label)
+                .textFieldStyle(.roundedBorder)
+                .font(.body)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.regularMaterial)
+        )
     }
     
     var countdownSection: some View {
-        VStack {
-            Toggle("Countdown (Pre-Alert)", systemImage: "timer", isOn: $userInput.preAlertEnabled)
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("Countdown Timer", systemImage: "timer", isOn: $userInput.preAlertEnabled)
+                .font(.headline)
+                .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+            
             if userInput.preAlertEnabled {
-                TimePickerView(hour: $userInput.selectedPreAlert.hour, min: $userInput.selectedPreAlert.min, sec: $userInput.selectedPreAlert.sec)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Countdown Duration")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    
+                    TimePickerView(hour: $userInput.selectedPreAlert.hour, min: $userInput.selectedPreAlert.min, sec: $userInput.selectedPreAlert.sec)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(.quaternary)
+                        )
+                }
             }
         }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.regularMaterial)
+        )
     }
     
     var scheduleSection: some View {
-        VStack {
-            Toggle("Schedule", systemImage: "calendar", isOn: $userInput.scheduleEnabled)
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("Schedule Time", systemImage: "calendar", isOn: $userInput.scheduleEnabled)
+                .font(.headline)
+                .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+            
             if userInput.scheduleEnabled {
-                DatePicker("", selection: $userInput.selectedDate, displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-                
-                daysOfTheWeekSection
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Alarm Time")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    
+                    DatePicker("", selection: $userInput.selectedDate, displayedComponents: .hourAndMinute)
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(.quaternary)
+                        )
+                    
+                    Text("Repeat Days")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 8)
+                    
+                    daysOfTheWeekSection
+                }
             }
         }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.regularMaterial)
+        )
     }
     
     var daysOfTheWeekSection: some View {
-        HStack(spacing: -3) {
+        HStack(spacing: 8) {
             ForEach(Locale.autoupdatingCurrent.orderedWeekdays, id: \.self) { weekday in
                 Button(action: {
                     if userInput.isSelected(day: weekday) {
@@ -213,44 +372,67 @@ struct AlarmAddView: View {
                     }
                 }) {
                     Text(weekday.rawValue.localizedUppercase)
-                        .font(.caption2)
-                        .allowsTightening(true)
-                        .minimumScaleFactor(0.5)
-                        .frame(width: 26, height: 26)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .frame(width: 32, height: 32)
                 }
-                .tint(.accent.opacity(userInput.isSelected(day: weekday) ? 1 : 0.4))
-                .buttonBorderShape(.circle)
-                .buttonStyle(.borderedProminent)
+                .foregroundStyle(userInput.isSelected(day: weekday) ? .white : .primary)
+                .background(
+                    Circle()
+                        .fill(userInput.isSelected(day: weekday) ? .accentColor : .quaternary)
+                )
+                .buttonStyle(.plain)
             }
         }
+        .padding(.horizontal, 4)
     }
     
     var secondaryButtonSection: some View {
-        VStack {
-            Picker("Secondary Button", systemImage: "button.programmable", selection: $userInput.selectedSecondaryButton) {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Alert Actions", systemImage: "button.programmable")
+                .font(.headline)
+                .foregroundStyle(.primary)
+            
+            Picker("Secondary Button", selection: $userInput.selectedSecondaryButton) {
                 ForEach(AlarmForm.SecondaryButtonOption.allCases, id: \.self) { button in
                     Text(button.rawValue).tag(button)
                 }
             }
+            .pickerStyle(.segmented)
             
             if userInput.selectedSecondaryButton == .countdown {
-                TimePickerView(hour: $userInput.selectedPostAlert.hour, min: $userInput.selectedPostAlert.min, sec: $userInput.selectedPostAlert.sec)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Repeat Duration")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    
+                    TimePickerView(hour: $userInput.selectedPostAlert.hour, min: $userInput.selectedPostAlert.min, sec: $userInput.selectedPostAlert.sec)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(.quaternary)
+                        )
+                }
             }
             
             let callout = switch userInput.selectedSecondaryButton {
-            case .none: "Only the Stop button is displayed in the alarm alert."
-            case .countdown: "Displays the Repeat option when the alarm is triggered."
-            case .openApp: "Displays the Open App button when the alarm is triggered."
+            case .none: "Only the Stop button will be displayed in the alarm alert."
+            case .countdown: "The Repeat option will be available when the alarm is triggered."
+            case .openApp: "The Open App button will be displayed when the alarm is triggered."
             }
             
             Text(callout)
-                .font(.callout)
-                .fontWeight(.light)
-                .foregroundStyle(.tertiary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .multilineTextAlignment(.leading)
-                .padding(.vertical, 4)
+                .padding(.top, 4)
         }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.regularMaterial)
+        )
     }
 }
 
