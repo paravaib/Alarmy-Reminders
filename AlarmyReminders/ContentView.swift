@@ -312,7 +312,7 @@ struct AlarmAddView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(Color(.quaternary))
+                                .fill(.quaternary)
                         )
                 }
             }
@@ -342,7 +342,7 @@ struct AlarmAddView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(Color(.quaternary))
+                                .fill(.quaternary)
                         )
                     
                     Text("Repeat Days")
@@ -379,7 +379,7 @@ struct AlarmAddView: View {
                 .foregroundStyle(userInput.isSelected(day: weekday) ? .white : .primary)
                 .background(
                     Circle()
-                        .fill(userInput.isSelected(day: weekday) ? .accent : Color(.quaternary))
+                        .fill(userInput.isSelected(day: weekday) ? Color.accentColor : Color(UIColor.quaternarySystemFill))
                 )
                 .buttonStyle(.plain)
             }
@@ -410,7 +410,7 @@ struct AlarmAddView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(Color(.quaternary))
+                                .fill(.quaternary)
                         )
                 }
             }
