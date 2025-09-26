@@ -33,7 +33,7 @@ struct ContentView: View {
         .onAppear {
             viewModel.fetchAlarms()
         }
-        .tint(.accentColor)
+        .tint(.accent)
     }
     
     var menuButton: some View {
@@ -70,7 +70,7 @@ struct ContentView: View {
         } label: {
             Image(systemName: "plus.circle.fill")
                 .font(.title2)
-                .foregroundStyle(.accentColor)
+                .foregroundStyle(.accent)
         }
     }
     
@@ -84,7 +84,7 @@ struct ContentView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "clock.badge.checkmark")
                         .font(.system(size: 80))
-                        .foregroundStyle(.accentColor.opacity(0.6))
+                        .foregroundStyle(.accent.opacity(0.6))
                     
                     VStack(spacing: 8) {
                         Text("No Active Reminders")
@@ -111,7 +111,7 @@ struct ContentView: View {
                     .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: 25)
-                            .fill(.accentColor)
+                            .fill(.accent)
                     )
                 }
                 .buttonStyle(.plain)
@@ -300,7 +300,7 @@ struct AlarmAddView: View {
         VStack(alignment: .leading, spacing: 12) {
             Toggle("Countdown Timer", systemImage: "timer", isOn: $userInput.preAlertEnabled)
                 .font(.headline)
-                .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+                .toggleStyle(SwitchToggleStyle(tint: .accent))
             
             if userInput.preAlertEnabled {
                 VStack(alignment: .leading, spacing: 8) {
@@ -328,7 +328,7 @@ struct AlarmAddView: View {
         VStack(alignment: .leading, spacing: 12) {
             Toggle("Schedule Time", systemImage: "calendar", isOn: $userInput.scheduleEnabled)
                 .font(.headline)
-                .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+                .toggleStyle(SwitchToggleStyle(tint: .accent))
             
             if userInput.scheduleEnabled {
                 VStack(alignment: .leading, spacing: 12) {
@@ -379,7 +379,7 @@ struct AlarmAddView: View {
                 .foregroundStyle(userInput.isSelected(day: weekday) ? .white : .primary)
                 .background(
                     Circle()
-                        .fill(userInput.isSelected(day: weekday) ? .accentColor : .quaternary)
+                        .fill(userInput.isSelected(day: weekday) ? .accent : .quaternary)
                 )
                 .buttonStyle(.plain)
             }
