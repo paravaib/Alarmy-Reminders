@@ -14,6 +14,9 @@ struct AlarmForm {
     var preAlertEnabled = false
     var scheduleEnabled = true // Always active by default
     
+    // Schedule type toggle
+    var scheduleType: ScheduleType = .now
+    
     var isValidAlarm: Bool {
         (preAlertEnabled && selectedPreAlert.interval > 0) || scheduleEnabled
     }
@@ -30,6 +33,11 @@ struct AlarmForm {
         case none = "None"
         case countdown = "Countdown"
         case openApp = "Open App"
+    }
+    
+    enum ScheduleType: String, CaseIterable {
+        case now = "Schedule Now"
+        case later = "Schedule Later"
     }
     
     struct CountdownInterval {
@@ -61,15 +69,23 @@ struct AlarmForm {
     var schedule: Alarm.Schedule? {
         guard scheduleEnabled else { return nil }
         
-        let dateComponents = Calendar.current.dateComponents([.hour, .minute], from: selectedDate)
-        
-        guard let hour = dateComponents.hour, let minute = dateComponents.minute else { return nil }
-        
-        let time = Alarm.Schedule.Relative.Time(hour: hour, minute: minute)
-        return .relative(.init(
-            time: time,
-            repeats: selectedDays.isEmpty ? .never : .weekly(Array(selectedDays))
-        ))
+        switch scheduleType {
+        case .now:
+            // For "Schedule Now", use relative time with repeat days
+            let dateComponents = Calendar.current.dateComponents([.hour, .minute], from: selectedDate)
+            
+            guard let hour = dateComponents.hour, let minute = dateComponents.minute else { return nil }
+            
+            let time = Alarm.Schedule.Relative.Time(hour: hour, minute: minute)
+            return .relative(.init(
+                time: time,
+                repeats: selectedDays.isEmpty ? .never : .weekly(Array(selectedDays))
+            ))
+            
+        case .later:
+            // For "Schedule Later", use fixed date (one-time only)
+            return .fixed(selectedDate)
+        }
     }
     
     var secondaryButtonBehavior: AlarmPresentation.Alert.SecondaryButtonBehavior? {

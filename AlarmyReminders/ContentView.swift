@@ -355,9 +355,6 @@ struct CreateReminderView: View {
                 // Main scrollable content
                 ScrollView {
                     VStack(spacing: 24) {
-                        // App branding
-                        appBrandingSection
-                        
                         // Header with app description
                         headerSection
                         
@@ -378,8 +375,8 @@ struct CreateReminderView: View {
                     .padding(.top, 8)
                 }
             }
-            .navigationTitle("New Alarm")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("Alarmy Reminder")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.white, for: .navigationBar) // Solid white nav bar
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
@@ -395,16 +392,6 @@ struct CreateReminderView: View {
         .sheet(isPresented: $showingOnboarding) {
             OnboardingView()
         }
-    }
-    
-    var appBrandingSection: some View {
-        VStack(spacing: 8) {
-            Text("Alarmy Reminder")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .foregroundStyle(.primary)
-        }
-        .padding(.horizontal, 4)
     }
     
     var headerSection: some View {
@@ -475,31 +462,78 @@ struct CreateReminderView: View {
                     .fontWeight(.medium)
             }
             
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Alarm Time")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fontWeight(.medium)
-                    
-                    DatePicker("", selection: $userInput.selectedDate, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
-                        .datePickerStyle(.compact)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.gray.opacity(0.1))
-                        )
-                }
+            // Schedule type toggle
+            VStack(alignment: .leading, spacing: 12) {
+                Text("When should this alarm go off?")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fontWeight(.medium)
                 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Repeat Days")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fontWeight(.medium)
+                Picker("Schedule Type", selection: $userInput.scheduleType) {
+                    ForEach(AlarmForm.ScheduleType.allCases, id: \.self) { type in
+                        Text(type.rawValue).tag(type)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+            
+            VStack(alignment: .leading, spacing: 16) {
+                if userInput.scheduleType == .now {
+                    // Schedule Now: Time picker + Repeat days
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Alarm Time")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fontWeight(.medium)
+                        
+                        DatePicker("", selection: $userInput.selectedDate, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.gray.opacity(0.1))
+                            )
+                    }
                     
-                    daysOfTheWeekSection
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Repeat Days")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fontWeight(.medium)
+                        
+                        daysOfTheWeekSection
+                    }
+                } else {
+                    // Schedule Later: Date + Time picker (no repeat days)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Date & Time")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fontWeight(.medium)
+                        
+                        DatePicker("", selection: $userInput.selectedDate, displayedComponents: [.date, .hourAndMinute])
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.gray.opacity(0.1))
+                            )
+                    }
+                    
+                    // Show info about one-time scheduling
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(.accent)
+                            .font(.caption)
+                        Text("This will be a one-time alarm")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 4)
                 }
             }
         }
@@ -609,7 +643,7 @@ struct RemindersListView: View {
                 }
             }
             .navigationTitle("My Alarm Notes")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.white, for: .navigationBar) // Solid white nav bar
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
