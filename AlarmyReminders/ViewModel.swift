@@ -250,7 +250,7 @@ import AppIntents
 
 extension AlarmButton {
     static var openAppButton: Self {
-        AlarmButton(text: "Open", textColor: .black, systemImageName: "swift")
+        AlarmButton(text: "Open", textColor: .black, systemImageName: "app.badge")
     }
     
     static var pauseButton: Self {

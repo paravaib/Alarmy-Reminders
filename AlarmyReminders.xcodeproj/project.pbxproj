@@ -61,7 +61,6 @@
 		141FFBC42DB201A5001A403C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		14BEA0F12DBDA40F00D885CD /* AlarmForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmForm.swift; sourceTree = "<group>"; };
 		14BEA0F32DBDA9D600D885CD /* AlarmMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmMetadata.swift; sourceTree = "<group>"; };
-		C0C8A80739F2D0D7A4333400 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,10 +84,8 @@
 		141FFB6F2DB1DF49001A403C = {
 			isa = PBXGroup;
 			children = (
-				C0C8A80739F2D0D7A4333400 /* README.md */,
 				141FFB9B2DB1E1CD001A403C /* AlarmyReminders */,
 				141FFBC52DB201A5001A403C /* AlarmyRemindersLiveActivity */,
-				141FFBA92DB2019A001A403C /* Frameworks */,
 				141FFB792DB1DF49001A403C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -115,13 +112,6 @@
 				141FFBA12DB1E1E2001A403C /* Info.plist */,
 			);
 			path = AlarmyReminders;
-			sourceTree = "<group>";
-		};
-		141FFBA92DB2019A001A403C /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		141FFBC52DB201A5001A403C /* AlarmyRemindersLiveActivity */ = {
