@@ -55,7 +55,7 @@ struct AlarmCell: View {
                 // Status icon with subtle background
                 ZStack {
                     Circle()
-                        .fill(statusColor.opacity(0.15))
+                        .fill(iconBackgroundColor)
                         .frame(width: 50, height: 50)
                     
                     Image(systemName: statusIconName)
@@ -144,19 +144,22 @@ struct AlarmCell: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(
-                    Color(.tertiarySystemBackground)
-                        .opacity(0.5)
+                    Color.gray.opacity(0.1)
                 )
             }
         }
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemBackground))
+                .fill(cardBaseColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(cardTintColor)
+                )
                 .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(statusColor.opacity(0.2), lineWidth: 1)
+                .stroke(cardBorderColor, lineWidth: 1.5)
         )
         .confirmationDialog("Delete Reminder", isPresented: $showingDeleteConfirmation) {
             Button("Delete", role: .destructive) {
@@ -180,46 +183,152 @@ struct AlarmCell: View {
             .font(.caption)
             .fontWeight(.medium)
             .textCase(.uppercase)
-            .foregroundStyle(statusColor)
+            .foregroundStyle(statusTagTextColor)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(
                 Capsule()
-                    .fill(statusColor.opacity(0.15))
+                    .fill(statusTagBackgroundColor)
                     .overlay(
                         Capsule()
-                            .stroke(statusColor.opacity(0.3), lineWidth: 0.5)
+                            .stroke(statusTagBorderColor, lineWidth: 0.5)
                     )
             )
     }
     
     var statusIconName: String {
+        if isCompleted {
+            return "checkmark.circle.fill"
+        }
+        
         switch alarm.state {
-        case .scheduled: "clock"
-        case .countdown: "timer"
-        case .paused: "pause.circle"
-        case .alerting: "bell.fill"
-        @unknown default: "questionmark"
+        case .scheduled: return "clock"
+        case .countdown: return "timer"
+        case .paused: return "pause.circle"
+        case .alerting: return "bell.fill"
+        @unknown default: return "questionmark"
         }
     }
     
     var tagLabel: String {
+        if isCompleted {
+            return "Completed"
+        }
+        
         switch alarm.state {
-        case .scheduled: "Scheduled"
-        case .countdown: "Running"
-        case .paused: "Paused"
-        case .alerting: "Alert"
-        @unknown default: "Unknown"
+        case .scheduled: return "Scheduled"
+        case .countdown: return "Running"
+        case .paused: return "Paused"
+        case .alerting: return "Alert"
+        @unknown default: return "Unknown"
         }
     }
     
     var statusColor: Color {
+        if isCompleted {
+            return Color.green
+        }
+        
         switch alarm.state {
-        case .scheduled: .blue
-        case .countdown: .green
-        case .paused: .orange
-        case .alerting: .red
-        @unknown default: .gray
+        case .scheduled: return Color.purple
+        case .countdown: return Color.orange
+        case .paused:    return Color.orange
+        case .alerting:  return Color.red
+        @unknown default: return Color.gray
+        }
+    }
+    
+    var isCompleted: Bool {
+        // An alarm is considered completed if:
+        // 1. It's a one-time alarm (not repeating)
+        // 2. It has a scheduled time that has already passed
+        // 3. It's currently in scheduled state (meaning it fired and completed)
+        
+        guard !alarm.isRepeating else { return false }
+        
+        if let alertingTime = alarm.alertingTime {
+            // If the alarm time has passed, it's completed
+            return alertingTime < Date()
+        }
+        
+        return false
+    }
+    
+    // Base background color for the card
+    var cardBaseColor: Color {
+        Color.white
+    }
+    
+    // A subtle tint to overlay on top of the base color
+    var cardTintColor: Color {
+        if alarm.isRepeating {
+            return Color.purple.opacity(0.05)
+        } else if isCompleted {
+            return Color.green.opacity(0.03)
+        } else {
+            switch alarm.state {
+            case .scheduled: return Color.purple.opacity(0.03)
+            case .countdown: return Color.orange.opacity(0.03)
+            case .paused:    return Color.orange.opacity(0.03)
+            case .alerting:  return Color.red.opacity(0.03)
+            @unknown default: return .clear
+            }
+        }
+    }
+    
+    var cardBorderColor: Color {
+        if alarm.isRepeating {
+            // Repeating alarms get purple border
+            return Color.purple.opacity(0.4)
+        } else if isCompleted {
+            // Completed alarms get green border
+            return Color.green.opacity(0.3)
+        } else {
+            // One-time alarms get colored border based on state
+            return statusColor.opacity(0.3)
+        }
+    }
+    
+    var iconBackgroundColor: Color {
+        if alarm.isRepeating {
+            // Repeating alarms get purple background for icon
+            return Color.purple.opacity(0.15)
+        } else if isCompleted {
+            // Completed alarms get green background for icon
+            return Color.green.opacity(0.15)
+        } else {
+            // One-time alarms get colored background based on state
+            return statusColor.opacity(0.15)
+        }
+    }
+    
+    var statusTagTextColor: Color {
+        if alarm.isRepeating {
+            return Color.purple
+        } else if isCompleted {
+            return Color.green
+        } else {
+            return statusColor
+        }
+    }
+    
+    var statusTagBackgroundColor: Color {
+        if alarm.isRepeating {
+            return Color.purple.opacity(0.15)
+        } else if isCompleted {
+            return Color.green.opacity(0.15)
+        } else {
+            return statusColor.opacity(0.15)
+        }
+    }
+    
+    var statusTagBorderColor: Color {
+        if alarm.isRepeating {
+            return Color.purple.opacity(0.3)
+        } else if isCompleted {
+            return Color.green.opacity(0.3)
+        } else {
+            return statusColor.opacity(0.3)
         }
     }
 }
@@ -234,16 +343,9 @@ struct CreateReminderView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Gradient background for a more calming feel
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(.systemGroupedBackground),
-                        Color(.systemGroupedBackground).opacity(0.8)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Clean white background
+                Color.white
+                    .ignoresSafeArea()
                 
                 ScrollView {
                     VStack(spacing: 24) {
@@ -259,7 +361,7 @@ struct CreateReminderView: View {
                         .padding(20)
                         .background(
                             RoundedRectangle(cornerRadius: 20)
-                                .fill(Color(.secondarySystemBackground))
+                                .fill(Color.white)
                                 .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
                         )
                     }
@@ -317,7 +419,7 @@ struct CreateReminderView: View {
             ZStack(alignment: .topLeading) {
                 // Background for the text box
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.tertiarySystemBackground))
+                    .fill(Color.gray.opacity(0.1))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(Color(.separator).opacity(0.5), lineWidth: 1)
@@ -366,7 +468,7 @@ struct CreateReminderView: View {
                         .padding(.vertical, 8)
                         .background(
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color(.tertiarySystemBackground))
+                                .fill(Color.gray.opacity(0.1))
                         )
                 }
                 
@@ -465,16 +567,9 @@ struct RemindersListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Gradient background for a more calming feel
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(.systemGroupedBackground),
-                        Color(.systemGroupedBackground).opacity(0.8)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Clean white background
+                Color.white
+                    .ignoresSafeArea()
                 
                 ScrollView {
                     VStack(spacing: 16) {
@@ -666,16 +761,7 @@ struct OnboardingView: View {
                 }
                 .padding(.bottom, 34)
             }
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(.systemGroupedBackground),
-                        Color(.systemGroupedBackground).opacity(0.8)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .background(Color.white)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
