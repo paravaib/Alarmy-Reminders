@@ -119,6 +119,21 @@ import AppIntents
         }
     }
     
+    func unscheduleAllAlarms() {
+        // Cancel everything known to AlarmManager, then clear local state.
+        do {
+            let existing = try alarmManager.alarms
+            existing.forEach { alarm in
+                try? alarmManager.cancel(id: alarm.id)
+            }
+        } catch {
+            print("Error fetching alarms for bulk cancel: \(error)")
+        }
+        Task { @MainActor in
+            alarmsMap.removeAll()
+        }
+    }
+    
     private func alarmPresentation(with userInput: AlarmForm) -> AlarmPresentation {
         let secondaryButtonBehavior = userInput.secondaryButtonBehavior
         let secondaryButton: AlarmButton? = switch secondaryButtonBehavior {

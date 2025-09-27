@@ -67,6 +67,13 @@ struct ContentView: View {
             } label: {
                 Label("Create New Reminder", systemImage: "plus.circle.fill")
             }
+            
+            // Delete all alarms.
+            Button(role: .destructive) {
+                viewModel.unscheduleAllAlarms()
+            } label: {
+                Label("Delete All Reminders", systemImage: "trash")
+            }
         } label: {
             Image(systemName: "plus.circle.fill")
                 .font(.title2)
@@ -134,6 +141,14 @@ struct ContentView: View {
                                 Label("Delete", systemImage: "trash")
                             }
                         }
+                        // Optional: long-press context menu as another affordance
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                viewModel.unscheduleAlarm(with: alarm.id)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                 }
             }
             .padding(.horizontal)
@@ -143,6 +158,8 @@ struct ContentView: View {
 }
 
 struct AlarmCell: View {
+    @Environment(ViewModel.self) private var viewModel
+    
     var alarm: Alarm
     var label: LocalizedStringResource
     
@@ -170,18 +187,46 @@ struct AlarmCell: View {
             
             Spacer()
             
-            // Status Indicator
+            // Status + inline actions
             VStack(spacing: 8) {
                 statusIcon
                 statusTag
+                
+                HStack(spacing: 8) {
+                    // Inline delete button (same action as swipe)
+                    Button(role: .destructive) {
+                        viewModel.unscheduleAlarm(with: alarm.id)
+                    } label: {
+                        Image(systemName: "trash.circle.fill")
+                            .font(.title3)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Delete reminder")
+                    
+                    // “More” menu for future actions
+                    Menu {
+                        Button(role: .destructive) {
+                            viewModel.unscheduleAlarm(with: alarm.id)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityLabel("More actions")
+                }
             }
         }
         .padding(16)
+        .contentShape(Rectangle()) // makes the whole row easier to swipe
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(.regularMaterial)
                 .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
         )
+        .accessibilityHint("Swipe left for actions or use the buttons on the right.")
     }
     
     var statusIcon: some View {
