@@ -4,33 +4,25 @@ import SwiftUI
 struct ContentView: View {
     @State private var viewModel = ViewModel()
     @State private var showingOnboarding = false
+    @State private var selectedTab = 0
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Gradient background for a more calming feel
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(.systemGroupedBackground),
-                        Color(.systemGroupedBackground).opacity(0.8)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
-                
-                AlarmAddView()
-            }
-            .navigationTitle("Alarmy Reminders")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingOnboarding = true }) {
-                        Image(systemName: "questionmark.circle")
-                            .foregroundStyle(.secondary)
-                    }
+        TabView(selection: $selectedTab) {
+            // Create Tab
+            CreateReminderView()
+                .tabItem {
+                    Image(systemName: "plus.circle.fill")
+                    Text("New Alarm Note")
                 }
-            }
+                .tag(0)
+            
+            // List Tab
+            RemindersListView(selectedTab: $selectedTab)
+                .tabItem {
+                    Image(systemName: "list.bullet")
+                    Text("My Alarm Notes")
+                }
+                .tag(1)
         }
         .environment(viewModel)
         .onAppear {
@@ -232,52 +224,79 @@ struct AlarmCell: View {
     }
 }
 
-struct AlarmAddView: View {
+struct CreateReminderView: View {
     @Environment(ViewModel.self) private var viewModel
+    @State private var showingOnboarding = false
     
     @State private var userInput = AlarmForm()
     @State private var showingSuccess = false
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Header with app description
-                headerSection
-                
-                // Main form
-                VStack(spacing: 20) {
-                    textfield
-                    scheduleSection
-                    createButton
-                }
-                .padding(20)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color(.secondarySystemBackground))
-                        .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+        NavigationStack {
+            ZStack {
+                // Gradient background for a more calming feel
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(.systemGroupedBackground),
+                        Color(.systemGroupedBackground).opacity(0.8)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
+                .ignoresSafeArea()
                 
-                remindersSection
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Header with app description
+                        headerSection
+                        
+                        // Main form
+                        VStack(spacing: 20) {
+                            textfield
+                            scheduleSection
+                            createButton
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color(.secondarySystemBackground))
+                                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+                        )
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .navigationTitle("Alarmy Reminders")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingOnboarding = true }) {
+                        Image(systemName: "questionmark.circle")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
         }
         .animation(.easeInOut(duration: 0.3), value: showingSuccess)
+        .sheet(isPresented: $showingOnboarding) {
+            OnboardingView()
+        }
     }
     
     var headerSection: some View {
         VStack(spacing: 12) {
             HStack {
-                Image(systemName: "leaf.fill")
+                Image(systemName: "alarm.fill")
                     .font(.title2)
-                    .foregroundStyle(.green)
-                Text("Create Your Reminder")
+                    .foregroundStyle(.accent)
+                Text("Create Your Alarm Note")
                     .font(.title2)
                     .fontWeight(.semibold)
                 Spacer()
             }
             
-            Text("Set a gentle reminder to help you stay mindful and focused")
+            Text("Create notes with actual alarm notifications - never miss anything again")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.leading)
@@ -290,7 +309,7 @@ struct AlarmAddView: View {
             HStack {
                 Image(systemName: "text.bubble")
                     .foregroundStyle(.accent)
-                Text("Reminder Name")
+                Text("Your Note")
                     .font(.headline)
                     .fontWeight(.medium)
             }
@@ -313,7 +332,7 @@ struct AlarmAddView: View {
                 
                 // Placeholder
                 if userInput.label.isEmpty {
-                    Text("What would you like to be reminded about?")
+                    Text("Write your note that will alarm you (e.g., 'Take medication at 8pm', 'Call dentist tomorrow')")
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 16)
@@ -420,7 +439,7 @@ struct AlarmAddView: View {
                         .foregroundColor(.white)
                 }
                 
-                Text(showingSuccess ? "Reminder Created!" : "Create Reminder")
+                Text(showingSuccess ? "Alarm Note Created!" : "Create Alarm Note")
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
@@ -437,54 +456,102 @@ struct AlarmAddView: View {
         .disabled(!userInput.isValidAlarm)
         .scaleEffect(showingSuccess ? 1.05 : 1.0)
     }
+}
+
+struct RemindersListView: View {
+    @Environment(ViewModel.self) private var viewModel
+    @Binding var selectedTab: Int
     
-    var remindersSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "list.bullet")
-                    .foregroundStyle(.accent)
-                Text("Your Reminders")
-                    .font(.headline)
-                    .fontWeight(.medium)
-            }
-            
-            if viewModel.hasUpcomingAlerts {
-                LazyVStack(spacing: 16) {
-                    ForEach(Array(viewModel.alarmsMap.values), id: \.0.id) { (alarm, label) in
-                        AlarmCell(alarm: alarm, label: label)
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                // Gradient background for a more calming feel
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(.systemGroupedBackground),
+                        Color(.systemGroupedBackground).opacity(0.8)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 16) {
+                        if viewModel.hasUpcomingAlerts {
+                            LazyVStack(spacing: 16) {
+                                ForEach(Array(viewModel.alarmsMap.values), id: \.0.id) { (alarm, label) in
+                                    AlarmCell(alarm: alarm, label: label)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                        } else {
+                            emptyStateView
+                        }
                     }
                 }
-            } else {
-                emptyStateView
+            }
+            .navigationTitle("My Alarm Notes")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        viewModel.unscheduleAllAlarms()
+                    }) {
+                        Image(systemName: "trash")
+                            .foregroundStyle(.red)
+                    }
+                    .disabled(!viewModel.hasUpcomingAlerts)
+                }
             }
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(.secondarySystemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
-        )
     }
     
     var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "clock.badge.checkmark")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary.opacity(0.6))
+        VStack(spacing: 24) {
+            Spacer()
             
-            VStack(spacing: 8) {
-                Text("No Reminders Yet")
+            VStack(spacing: 20) {
+                Image(systemName: "clock.badge.checkmark")
+                    .font(.system(size: 64))
+                    .foregroundStyle(.secondary.opacity(0.6))
+                
+                VStack(spacing: 12) {
+                    Text("No Alarm Notes Yet")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+                    
+                    Text("Create your first alarm note - it will actually ring when it's time")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                
+                Button(action: {
+                    selectedTab = 0 // Switch to New Alarm tab
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Create Your First Alarm Note")
+                    }
                     .font(.headline)
                     .fontWeight(.medium)
-                    .foregroundStyle(.primary)
-                
-                Text("Create your first reminder to get started on your mindful journey")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(.accent)
+                    )
+                }
             }
+            
+            Spacer()
         }
-        .padding(.vertical, 20)
+        .padding(.horizontal, 16)
     }
 }
 
@@ -525,24 +592,24 @@ struct OnboardingView: View {
     
     private let pages = [
         OnboardingPage(
-            icon: "leaf.fill",
+            icon: "alarm.fill",
             title: "Welcome to Alarmy Reminders",
-            description: "Your gentle companion for mindful living and peaceful reminders"
+            description: "The only reminder app that actually buzzes like a real alarm - not just silent notifications"
         ),
         OnboardingPage(
-            icon: "clock.badge.checkmark",
-            title: "Set Mindful Reminders",
-            description: "Create gentle reminders that help you stay present and focused throughout your day"
+            icon: "exclamationmark.triangle",
+            title: "The Problem with Other Apps",
+            description: "Regular reminder apps only show silent notifications that you can easily miss or ignore"
         ),
         OnboardingPage(
-            icon: "heart.fill",
-            title: "Calm & Peaceful",
-            description: "Experience a soothing interface designed to bring tranquility to your daily routine"
+            icon: "note.text.badge.plus",
+            title: "Notes with Alarm Feature",
+            description: "Write any note and set it to alarm at a specific time - it will actually ring and vibrate"
         ),
         OnboardingPage(
-            icon: "sparkles",
-            title: "Ready to Begin?",
-            description: "Start your journey towards a more mindful and peaceful lifestyle"
+            icon: "bell.badge.fill",
+            title: "Real Alarms, Not Just Reminders",
+            description: "Get persistent alarms that demand your attention until you acknowledge them"
         )
     ]
     
