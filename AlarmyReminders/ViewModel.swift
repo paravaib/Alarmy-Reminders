@@ -113,9 +113,19 @@ import AppIntents
     }
     
     func unscheduleAlarm(with alarmID: UUID) {
-        try? alarmManager.cancel(id: alarmID)
+        // Cancel at AlarmKit level first
+        do {
+            try alarmManager.cancel(id: alarmID)
+            print("✅ Successfully cancelled alarm \(alarmID) at AlarmKit level")
+        } catch {
+            print("❌ Error cancelling alarm \(alarmID) at AlarmKit level: \(error)")
+            return // Don't update local state if AlarmKit cancellation failed
+        }
+        
+        // Only update local state after successful AlarmKit cancellation
         Task { @MainActor in
             alarmsMap[alarmID] = nil
+            print("✅ Removed alarm \(alarmID) from local state")
         }
     }
     
@@ -123,14 +133,33 @@ import AppIntents
         // Cancel everything known to AlarmManager, then clear local state.
         do {
             let existing = try alarmManager.alarms
+            print("🔄 Found \(existing.count) alarms to cancel at AlarmKit level")
+            
+            var successCount = 0
+            var failureCount = 0
+            
             existing.forEach { alarm in
-                try? alarmManager.cancel(id: alarm.id)
+                do {
+                    try alarmManager.cancel(id: alarm.id)
+                    successCount += 1
+                    print("✅ Successfully cancelled alarm \(alarm.id) at AlarmKit level")
+                } catch {
+                    failureCount += 1
+                    print("❌ Error cancelling alarm \(alarm.id) at AlarmKit level: \(error)")
+                }
+            }
+            
+            print("📊 AlarmKit cancellation summary: \(successCount) successful, \(failureCount) failed")
+            
+            // Only clear local state if we had some successful cancellations
+            if successCount > 0 {
+                Task { @MainActor in
+                    alarmsMap.removeAll()
+                    print("✅ Cleared all alarms from local state")
+                }
             }
         } catch {
-            print("Error fetching alarms for bulk cancel: \(error)")
-        }
-        Task { @MainActor in
-            alarmsMap.removeAll()
+            print("❌ Error fetching alarms for bulk cancel: \(error)")
         }
     }
     

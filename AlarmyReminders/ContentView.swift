@@ -35,6 +35,9 @@ struct ContentView: View {
             }
         }
         .tint(.accent)
+        .background(Color.white.ignoresSafeArea()) // Ensure white behind everything
+        .toolbarBackground(.white, for: .tabBar)   // Solid white tab bar
+        .toolbarBackground(.visible, for: .tabBar)
         .sheet(isPresented: $showingOnboarding) {
             OnboardingView()
         }
@@ -347,6 +350,7 @@ struct CreateReminderView: View {
                 Color.white
                     .ignoresSafeArea()
                 
+                // Main scrollable content
                 ScrollView {
                     VStack(spacing: 24) {
                         // Header with app description
@@ -371,6 +375,8 @@ struct CreateReminderView: View {
             }
             .navigationTitle("Alarmy Reminders")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.white, for: .navigationBar) // Solid white nav bar
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingOnboarding = true }) {
@@ -387,21 +393,29 @@ struct CreateReminderView: View {
     }
     
     var headerSection: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Image(systemName: "alarm.fill")
-                    .font(.title2)
-                    .foregroundStyle(.accent)
-                Text("Create Your Alarm Note")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Spacer()
-            }
+        VStack(spacing: 16) {
+            // App title
+            Text("Alarmy Reminders")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundStyle(.primary)
             
-            Text("Create notes with actual alarm notifications - never miss anything again")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.leading)
+            VStack(spacing: 12) {
+                HStack {
+                    Image(systemName: "alarm.fill")
+                        .font(.title2)
+                        .foregroundStyle(.accent)
+                    Text("Create Your Alarm Note")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+                
+                Text("Create notes with actual alarm notifications - never miss anything again")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+            }
         }
         .padding(.horizontal, 4)
     }
@@ -589,6 +603,8 @@ struct RemindersListView: View {
             }
             .navigationTitle("My Alarm Notes")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.white, for: .navigationBar) // Solid white nav bar
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -763,6 +779,8 @@ struct OnboardingView: View {
             }
             .background(Color.white)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.white, for: .navigationBar) // Solid white nav bar
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Close") {
