@@ -105,6 +105,10 @@ import AppIntents
                 let alarm = try await alarmManager.schedule(id: id, configuration: alarmConfiguration)
                 await MainActor.run {
                     alarmsMap[id] = (alarm, label)
+                    // Store the label persistently so we can retrieve it after app restart
+                    // Convert LocalizedStringResource to String for storage
+                    let labelString = String(localized: label)
+                    storeAlarmLabel(id, label: labelString)
                 }
             } catch {
                 print("Error encountered when scheduling alarm: \(error)")
@@ -125,6 +129,8 @@ import AppIntents
         // Only update local state after successful AlarmKit cancellation
         Task { @MainActor in
             alarmsMap[alarmID] = nil
+            // Clean up the stored label
+            removeStoredAlarmLabel(alarmID)
             print("✅ Removed alarm \(alarmID) from local state")
         }
     }
@@ -154,6 +160,8 @@ import AppIntents
             // Only clear local state if we had some successful cancellations
             if successCount > 0 {
                 Task { @MainActor in
+                    // Clean up all stored labels before clearing the map
+                    alarmsMap.keys.forEach { removeStoredAlarmLabel($0) }
                     alarmsMap.removeAll()
                     print("✅ Cleared all alarms from local state")
                 }
@@ -217,7 +225,9 @@ import AppIntents
             
             // Update existing alarm states.
             remoteAlarms.forEach { updated in
-                alarmsMap[updated.id, default: (updated, "Alarm (Old Session)")].0 = updated
+                // Try to get the label from existing map, or extract from alarm attributes
+                let label = alarmsMap[updated.id]?.1 ?? extractTitleFromAlarm(updated)
+                alarmsMap[updated.id] = (updated, label)
             }
             
             let knownAlarmIDs = Set(alarmsMap.keys)
@@ -245,6 +255,25 @@ import AppIntents
         case .authorized: return true
         @unknown default: return false
         }
+    }
+    
+    private func extractTitleFromAlarm(_ alarm: Alarm) -> LocalizedStringResource {
+        // Try to get the stored label from UserDefaults first
+        let storedLabel = UserDefaults.standard.string(forKey: "alarm_label_\(alarm.id.uuidString)")
+        if let storedLabel = storedLabel {
+            return LocalizedStringResource(stringLiteral: storedLabel)
+        }
+        
+        // If no stored label, provide a more user-friendly default
+        return LocalizedStringResource("Alarm Reminder")
+    }
+    
+    private func storeAlarmLabel(_ alarmId: UUID, label: String) {
+        UserDefaults.standard.set(label, forKey: "alarm_label_\(alarmId.uuidString)")
+    }
+    
+    private func removeStoredAlarmLabel(_ alarmId: UUID) {
+        UserDefaults.standard.removeObject(forKey: "alarm_label_\(alarmId.uuidString)")
     }
 }
 

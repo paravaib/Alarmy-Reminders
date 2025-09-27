@@ -72,24 +72,25 @@ struct AlarmCell: View {
                 
                 // Main information
                 VStack(alignment: .leading, spacing: 6) {
-                    // Time/Countdown Display
+                    // Label (Title) - Now the most prominent
+                    Text(label)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                    
+                    // Time/Countdown Display - Secondary
                     if let alertingTime = alarm.alertingTime {
                         Text(alertingTime, style: .time)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.primary)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
                     } else if let countdown = alarm.countdownDuration?.preAlert {
                         Text(countdown.customFormatted())
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.primary)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
                     }
-                    
-                    // Label
-                    Text(label)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
                     
                     // Status tag
                     statusTag
