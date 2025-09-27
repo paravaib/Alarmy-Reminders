@@ -6,6 +6,8 @@ struct ContentView: View {
     @State private var showingOnboarding = false
     @State private var selectedTab = 0
     
+    private let hasSeenOnboardingKey = "hasSeenOnboarding"
+    
     var body: some View {
         TabView(selection: $selectedTab) {
             // Create Tab
@@ -27,8 +29,8 @@ struct ContentView: View {
         .environment(viewModel)
         .onAppear {
             viewModel.fetchAlarms()
-            // Show onboarding if it's the first time
-            if viewModel.alarmsMap.isEmpty {
+            // Show onboarding only if user hasn't seen it before
+            if !UserDefaults.standard.bool(forKey: hasSeenOnboardingKey) {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     showingOnboarding = true
                 }
@@ -353,6 +355,9 @@ struct CreateReminderView: View {
                 // Main scrollable content
                 ScrollView {
                     VStack(spacing: 24) {
+                        // App branding
+                        appBrandingSection
+                        
                         // Header with app description
                         headerSection
                         
@@ -373,7 +378,7 @@ struct CreateReminderView: View {
                     .padding(.top, 8)
                 }
             }
-            .navigationTitle("Alarmy Reminders")
+            .navigationTitle("New Alarm")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(.white, for: .navigationBar) // Solid white nav bar
             .toolbarBackground(.visible, for: .navigationBar)
@@ -392,30 +397,32 @@ struct CreateReminderView: View {
         }
     }
     
-    var headerSection: some View {
-        VStack(spacing: 16) {
-            // App title
-            Text("Alarmy Reminders")
+    var appBrandingSection: some View {
+        VStack(spacing: 8) {
+            Text("Alarmy Reminder")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .foregroundStyle(.primary)
-            
-            VStack(spacing: 12) {
-                HStack {
-                    Image(systemName: "alarm.fill")
-                        .font(.title2)
-                        .foregroundStyle(.accent)
-                    Text("Create Your Alarm Note")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    Spacer()
-                }
-                
-                Text("Create notes with actual alarm notifications - never miss anything again")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.leading)
+        }
+        .padding(.horizontal, 4)
+    }
+    
+    var headerSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "alarm.fill")
+                    .font(.title2)
+                    .foregroundStyle(.accent)
+                Text("Create Your Alarm Note")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                Spacer()
             }
+            
+            Text("Create notes with actual alarm notifications - never miss anything again")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
         }
         .padding(.horizontal, 4)
     }
@@ -701,6 +708,8 @@ struct OnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var currentPage = 0
     
+    private let hasSeenOnboardingKey = "hasSeenOnboarding"
+    
     private let pages = [
         OnboardingPage(
             icon: "alarm.fill",
@@ -753,6 +762,7 @@ struct OnboardingView: View {
                     HStack(spacing: 16) {
                         if currentPage < pages.count - 1 {
                             Button("Skip") {
+                                markOnboardingComplete()
                                 dismiss()
                             }
                             .foregroundStyle(.secondary)
@@ -767,6 +777,7 @@ struct OnboardingView: View {
                             .buttonStyle(.borderedProminent)
                         } else {
                             Button("Get Started") {
+                                markOnboardingComplete()
                                 dismiss()
                             }
                             .buttonStyle(.borderedProminent)
@@ -784,11 +795,17 @@ struct OnboardingView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Close") {
+                        markOnboardingComplete()
                         dismiss()
                     }
                 }
             }
         }
+    }
+    
+    private func markOnboardingComplete() {
+        UserDefaults.standard.set(true, forKey: hasSeenOnboardingKey)
+        print("✅ Onboarding marked as complete")
     }
 }
 
