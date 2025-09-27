@@ -9,10 +9,10 @@ struct AlarmForm {
     var selectedPreAlert = CountdownInterval()
     var selectedPostAlert = CountdownInterval()
     
-    var selectedSecondaryButton: SecondaryButtonOption = .none
+    var selectedSecondaryButton: SecondaryButtonOption = .openApp
     
     var preAlertEnabled = false
-    var scheduleEnabled = false
+    var scheduleEnabled = true // Always active by default
     
     var isValidAlarm: Bool {
         (preAlertEnabled && selectedPreAlert.interval > 0) || scheduleEnabled

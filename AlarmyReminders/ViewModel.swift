@@ -257,6 +257,87 @@ extension Alarm {
             return nil
         }
     }
+    
+    var isRepeating: Bool {
+        guard let schedule else { return false }
+        
+        switch schedule {
+        case .fixed:
+            return false
+        case .relative(let relative):
+            switch relative.repeats {
+            case .never:
+                return false
+            case .weekly:
+                return true
+            @unknown default:
+                return false
+            }
+        @unknown default:
+            return false
+        }
+    }
+    
+    var nextFireTime: Date? {
+        guard let schedule else { return nil }
+        
+        switch schedule {
+        case .fixed(let date):
+            return date > Date() ? date : nil
+        case .relative(let relative):
+            let calendar = Calendar.current
+            let now = Date()
+            
+            // Get today's date with the alarm time
+            var components = calendar.dateComponents([.year, .month, .day], from: now)
+            components.hour = relative.time.hour
+            components.minute = relative.time.minute
+            components.second = 0
+            
+            guard let todayAlarmTime = calendar.date(from: components) else { return nil }
+            
+            // If it's a one-time alarm
+            if case .never = relative.repeats {
+                return todayAlarmTime > now ? todayAlarmTime : nil
+            }
+            
+            // If it's a repeating alarm
+            if case .weekly(let weekdays) = relative.repeats {
+                // Check if today is one of the repeat days
+                let todayWeekday = calendar.component(.weekday, from: now)
+                let todayLocaleWeekday = Locale.Weekday(calendarWeekday: todayWeekday)
+                
+                if let todayLocaleWeekday = todayLocaleWeekday, weekdays.contains(todayLocaleWeekday) {
+                    // If today is a repeat day and the time hasn't passed, return today's time
+                    if todayAlarmTime > now {
+                        return todayAlarmTime
+                    }
+                }
+                
+                // Find the next occurrence
+                for i in 1...7 {
+                    guard let nextDate = calendar.date(byAdding: .day, value: i, to: now) else { continue }
+                    let nextWeekday = calendar.component(.weekday, from: nextDate)
+                    let nextLocaleWeekday = Locale.Weekday(calendarWeekday: nextWeekday)
+                    
+                    if let nextLocaleWeekday = nextLocaleWeekday, weekdays.contains(nextLocaleWeekday) {
+                        var nextComponents = calendar.dateComponents([.year, .month, .day], from: nextDate)
+                        nextComponents.hour = relative.time.hour
+                        nextComponents.minute = relative.time.minute
+                        nextComponents.second = 0
+                        
+                        if let nextAlarmTime = calendar.date(from: nextComponents) {
+                            return nextAlarmTime
+                        }
+                    }
+                }
+            }
+            
+            return nil
+        @unknown default:
+            return nil
+        }
+    }
 }
 
 extension Alarm.Schedule {
@@ -283,5 +364,22 @@ extension Locale {
             return Array(days[firstDayIdx...] + days[0..<firstDayIdx])
         }
         return days
+    }
+}
+
+extension Locale.Weekday {
+    // Maps Calendar.component(.weekday, from:) -> Locale.Weekday
+    // Calendar weekday uses 1 = Sunday ... 7 = Saturday (Gregorian)
+    init?(calendarWeekday: Int) {
+        switch calendarWeekday {
+        case 1: self = .sunday
+        case 2: self = .monday
+        case 3: self = .tuesday
+        case 4: self = .wednesday
+        case 5: self = .thursday
+        case 6: self = .friday
+        case 7: self = .saturday
+        default: return nil
+        }
     }
 }
