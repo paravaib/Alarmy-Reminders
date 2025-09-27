@@ -140,10 +140,10 @@ struct AlarmCell: View {
                         HStack(spacing: 6) {
                             Image(systemName: "clock")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white)
                             Text("Next: \(nextFireTime, style: .date) at \(nextFireTime, style: .time)")
                                 .font(.caption)
-                                .foregroundStyle(.accent)
+                                .foregroundStyle(.white)
                         }
                     }
                     
@@ -152,7 +152,7 @@ struct AlarmCell: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(
-                    Color.gray.opacity(0.1)
+                    Color.orange
                 )
             }
         }
@@ -683,6 +683,7 @@ struct CreateReminderView: View {
 struct RemindersListView: View {
     @Environment(ViewModel.self) private var viewModel
     @Binding var selectedTab: Int
+    @State private var showingDeleteAllConfirmation = false
     
     var body: some View {
         NavigationStack {
@@ -724,13 +725,21 @@ struct RemindersListView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        viewModel.unscheduleAllAlarms()
+                        showingDeleteAllConfirmation = true
                     }) {
                         Image(systemName: "trash")
                             .foregroundStyle(.red)
                     }
                     .disabled(!viewModel.hasUpcomingAlerts)
                 }
+            }
+            .confirmationDialog("Delete All Alarms", isPresented: $showingDeleteAllConfirmation) {
+                Button("Delete All", role: .destructive) {
+                    viewModel.unscheduleAllAlarms()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure you want to delete all alarm notes? This action cannot be undone.")
             }
         }
     }
