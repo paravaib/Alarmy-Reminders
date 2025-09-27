@@ -250,19 +250,19 @@ import AppIntents
 
 extension AlarmButton {
     static var openAppButton: Self {
-        AlarmButton(text: "Open", textColor: .black, systemImageName: "app.badge")
+        AlarmButton(text: "Open", textColor: .primary, systemImageName: "app.badge")
     }
     
     static var pauseButton: Self {
-        AlarmButton(text: "Pause", textColor: .black, systemImageName: "pause.fill")
+        AlarmButton(text: "Pause", textColor: .primary, systemImageName: "pause.fill")
     }
     
     static var resumeButton: Self {
-        AlarmButton(text: "Start", textColor: .black, systemImageName: "play.fill")
+        AlarmButton(text: "Start", textColor: .primary, systemImageName: "play.fill")
     }
     
     static var repeatButton: Self {
-        AlarmButton(text: "Repeat", textColor: .black, systemImageName: "repeat.circle")
+        AlarmButton(text: "Repeat", textColor: .primary, systemImageName: "repeat.circle")
     }
     
     static var stopButton: Self {

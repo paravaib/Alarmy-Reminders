@@ -38,9 +38,10 @@ struct ContentView: View {
             }
         }
         .tint(.accent)
-        .background(Color.white.ignoresSafeArea()) // Ensure white behind everything
-        .toolbarBackground(.white, for: .tabBar)   // Solid white tab bar
         .toolbarBackground(.visible, for: .tabBar)
+        .onTapGesture {
+            hideKeyboard()
+        }
         .sheet(isPresented: $showingOnboarding) {
             OnboardingView()
         }
@@ -87,7 +88,7 @@ struct AlarmCell: View {
                     // Label
                     Text(label)
                         .font(.subheadline)
-                        .foregroundStyle(Color.black.opacity(0.8))
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                     
                     // Status tag
@@ -138,10 +139,10 @@ struct AlarmCell: View {
                         HStack(spacing: 6) {
                             Image(systemName: "clock")
                                 .font(.caption)
-                                .foregroundStyle(Color.black.opacity(0.8))
+                                .foregroundStyle(.secondary)
                             Text("Next: \(nextFireTime, style: .date) at \(nextFireTime, style: .time)")
                                 .font(.caption)
-                                .foregroundStyle(Color.blue.opacity(0.7))
+                                .foregroundStyle(.accent)
                         }
                     }
                     
@@ -262,7 +263,7 @@ struct AlarmCell: View {
     
     // Base background color for the card
     var cardBaseColor: Color {
-        Color.white
+        Color(.systemBackground)
     }
     
     // A subtle tint to overlay on top of the base color
@@ -349,8 +350,8 @@ struct CreateReminderView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Clean white background
-                Color.white
+                // Adaptive background
+                Color(.systemGroupedBackground)
                     .ignoresSafeArea()
                 
                 // Main scrollable content
@@ -368,17 +369,27 @@ struct CreateReminderView: View {
                         .padding(20)
                         .background(
                             RoundedRectangle(cornerRadius: 20)
-                                .fill(Color.white)
+                                .fill(Color(.secondarySystemGroupedBackground))
                                 .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
                         )
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                 }
+                .onTapGesture {
+                    // Dismiss keyboard when tapping anywhere in the scroll view
+                    hideKeyboard()
+                }
+                .simultaneousGesture(
+                    DragGesture()
+                        .onChanged { _ in
+                            // Dismiss keyboard when user starts scrolling
+                            hideKeyboard()
+                        }
+                )
             }
             .navigationTitle("Alarmy Reminder")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.white, for: .navigationBar) // Solid white nav bar
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -409,7 +420,7 @@ struct CreateReminderView: View {
             
             Text("Create notes with actual alarm notifications - never miss anything again")
                 .font(.subheadline)
-                .foregroundStyle(Color.blue.opacity(0.7))
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.leading)
         }
         .padding(.horizontal, 4)
@@ -428,10 +439,10 @@ struct CreateReminderView: View {
             ZStack(alignment: .topLeading) {
                 // Background for the text box
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.gray.opacity(0.1))
+                    .fill(Color(.tertiarySystemFill))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color(.separator).opacity(0.5), lineWidth: 1)
+                            .stroke(Color(.separator), lineWidth: 1)
                     )
                 
                 // Multiline big text box
@@ -444,7 +455,7 @@ struct CreateReminderView: View {
                 // Placeholder
                 if userInput.label.isEmpty {
                     Text("Write your note that will alarm you (e.g., 'Take medication at 8pm', 'Call dentist tomorrow')")
-                        .foregroundStyle(Color.blue.opacity(0.6))
+                        .foregroundStyle(.placeholder)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 16)
                         .allowsHitTesting(false)
@@ -467,7 +478,7 @@ struct CreateReminderView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("When should this alarm go off?")
                     .font(.subheadline)
-                    .foregroundStyle(Color.blue.opacity(0.8))
+                    .foregroundStyle(.secondary)
                     .fontWeight(.medium)
                 
                 Picker("Schedule Type", selection: $userInput.scheduleType) {
@@ -487,7 +498,7 @@ struct CreateReminderView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Alarm Time")
                                     .font(.subheadline)
-                                    .foregroundStyle(Color.blue.opacity(0.8))
+                                    .foregroundStyle(.secondary)
                                     .fontWeight(.medium)
                                 
                                 DatePicker("", selection: $userInput.selectedDate, displayedComponents: .hourAndMinute)
@@ -497,7 +508,7 @@ struct CreateReminderView: View {
                                     .padding(.vertical, 8)
                                     .background(
                                         RoundedRectangle(cornerRadius: 10)
-                                            .fill(Color.gray.opacity(0.1))
+                                            .fill(Color(.tertiarySystemFill))
                                     )
                             }
                             
@@ -505,7 +516,7 @@ struct CreateReminderView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Repeat Days")
                                     .font(.subheadline)
-                                    .foregroundStyle(Color.blue.opacity(0.8))
+                                    .foregroundStyle(.secondary)
                                     .fontWeight(.medium)
                                 
                                 daysOfTheWeekSection
@@ -517,7 +528,7 @@ struct CreateReminderView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Date & Time")
                             .font(.subheadline)
-                            .foregroundStyle(Color.blue.opacity(0.8))
+                            .foregroundStyle(.secondary)
                             .fontWeight(.medium)
                         
                         DatePicker("", selection: $userInput.selectedDate, displayedComponents: [.date, .hourAndMinute])
@@ -527,7 +538,7 @@ struct CreateReminderView: View {
                             .padding(.vertical, 8)
                             .background(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.gray.opacity(0.1))
+                                    .fill(Color(.tertiarySystemFill))
                             )
                     }
                     
@@ -538,7 +549,7 @@ struct CreateReminderView: View {
                             .font(.caption)
                         Text("This will be a one-time alarm")
                             .font(.caption)
-                            .foregroundStyle(Color.blue.opacity(0.7))
+                            .foregroundStyle(.secondary)
                     }
                     .padding(.top, 4)
                 }
@@ -552,12 +563,12 @@ struct CreateReminderView: View {
             if userInput.selectedDays.isEmpty {
                 Text("No days selected")
                     .font(.subheadline)
-                    .foregroundStyle(Color.blue.opacity(0.6))
+                    .foregroundStyle(.placeholder)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.gray.opacity(0.1))
+                            .fill(Color(.tertiarySystemFill))
                     )
             } else {
                 Text(selectedDaysText)
@@ -596,10 +607,10 @@ struct CreateReminderView: View {
                                     .fill(isSelected ? Color.accentColor : Color.clear)
                                     .overlay(
                                         Circle()
-                                            .stroke(Color.blue.opacity(isSelected ? 0 : 0.4), lineWidth: 1)
+                                            .stroke(Color.accentColor.opacity(isSelected ? 0 : 0.4), lineWidth: 1)
                                     )
                             )
-                            .foregroundColor(isSelected ? .white : .primary)
+                            .foregroundStyle(isSelected ? .white : .primary)
                     }
                 }
             }
@@ -642,17 +653,17 @@ struct CreateReminderView: View {
                 if showingSuccess {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.title3)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                 } else {
                     Image(systemName: "plus.circle.fill")
                         .font(.title3)
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                 }
                 
                 Text(showingSuccess ? "Alarm Note Created!" : "Create Alarm Note")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
             }
             .padding(.horizontal, 32)
             .padding(.vertical, 16)
@@ -675,8 +686,8 @@ struct RemindersListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Clean white background
-                Color.white
+                // Adaptive background
+                Color(.systemGroupedBackground)
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -694,10 +705,20 @@ struct RemindersListView: View {
                         }
                     }
                 }
+                .onTapGesture {
+                    // Dismiss keyboard when tapping anywhere in the scroll view
+                    hideKeyboard()
+                }
+                .simultaneousGesture(
+                    DragGesture()
+                        .onChanged { _ in
+                            // Dismiss keyboard when user starts scrolling
+                            hideKeyboard()
+                        }
+                )
             }
             .navigationTitle("My Alarm Notes")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.white, for: .navigationBar) // Solid white nav bar
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -730,7 +751,7 @@ struct RemindersListView: View {
                     
                     Text("Create your first alarm note - it will actually ring when it's time")
                         .font(.body)
-                        .foregroundStyle(Color.blue.opacity(0.7))
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                 }
@@ -744,7 +765,7 @@ struct RemindersListView: View {
                     }
                     .font(.headline)
                     .fontWeight(.medium)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(
@@ -875,9 +896,8 @@ struct OnboardingView: View {
                 }
                 .padding(.bottom, 34)
             }
-            .background(Color.white)
+            .background(Color(.systemGroupedBackground))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.white, for: .navigationBar) // Solid white nav bar
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -943,6 +963,20 @@ private extension View {
             self.badge(count)
         } else {
             self
+        }
+    }
+}
+
+// Helper function to dismiss keyboard
+private func hideKeyboard() {
+    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+}
+
+// Extension to add keyboard dismissal to any view
+extension View {
+    func dismissKeyboardOnTap() -> some View {
+        self.onTapGesture {
+            hideKeyboard()
         }
     }
 }
