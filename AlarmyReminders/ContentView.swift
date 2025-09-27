@@ -25,6 +25,7 @@ struct ContentView: View {
                     Text("My Alarm Notes")
                 }
                 .tag(1)
+                .tabBadge(viewModel.alarmsMap.count)
         }
         .environment(viewModel)
         .onAppear {
@@ -86,7 +87,7 @@ struct AlarmCell: View {
                     // Label
                     Text(label)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.black.opacity(0.8))
                         .lineLimit(1)
                     
                     // Status tag
@@ -137,10 +138,10 @@ struct AlarmCell: View {
                         HStack(spacing: 6) {
                             Image(systemName: "clock")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.black.opacity(0.8))
                             Text("Next: \(nextFireTime, style: .date) at \(nextFireTime, style: .time)")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.blue.opacity(0.7))
                         }
                     }
                     
@@ -408,7 +409,7 @@ struct CreateReminderView: View {
             
             Text("Create notes with actual alarm notifications - never miss anything again")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.blue.opacity(0.7))
                 .multilineTextAlignment(.leading)
         }
         .padding(.horizontal, 4)
@@ -443,7 +444,7 @@ struct CreateReminderView: View {
                 // Placeholder
                 if userInput.label.isEmpty {
                     Text("Write your note that will alarm you (e.g., 'Take medication at 8pm', 'Call dentist tomorrow')")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.blue.opacity(0.6))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 16)
                         .allowsHitTesting(false)
@@ -466,7 +467,7 @@ struct CreateReminderView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("When should this alarm go off?")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.blue.opacity(0.8))
                     .fontWeight(.medium)
                 
                 Picker("Schedule Type", selection: $userInput.scheduleType) {
@@ -479,38 +480,44 @@ struct CreateReminderView: View {
             
             VStack(alignment: .leading, spacing: 16) {
                 if userInput.scheduleType == .now {
-                    // Schedule Now: Time picker + Repeat days
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Alarm Time")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fontWeight(.medium)
-                        
-                        DatePicker("", selection: $userInput.selectedDate, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
-                            .datePickerStyle(.compact)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.gray.opacity(0.1))
-                            )
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Repeat Days")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fontWeight(.medium)
-                        
-                        daysOfTheWeekSection
+                    // Schedule Now: Time picker + Repeat days on same line
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .top, spacing: 16) {
+                            // Time picker section
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Alarm Time")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.blue.opacity(0.8))
+                                    .fontWeight(.medium)
+                                
+                                DatePicker("", selection: $userInput.selectedDate, displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                                    .datePickerStyle(.compact)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.gray.opacity(0.1))
+                                    )
+                            }
+                            
+                            // Repeat days section
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Repeat Days")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.blue.opacity(0.8))
+                                    .fontWeight(.medium)
+                                
+                                daysOfTheWeekSection
+                            }
+                        }
                     }
                 } else {
                     // Schedule Later: Date + Time picker (no repeat days)
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Date & Time")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.blue.opacity(0.8))
                             .fontWeight(.medium)
                         
                         DatePicker("", selection: $userInput.selectedDate, displayedComponents: [.date, .hourAndMinute])
@@ -531,7 +538,7 @@ struct CreateReminderView: View {
                             .font(.caption)
                         Text("This will be a one-time alarm")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.blue.opacity(0.7))
                     }
                     .padding(.top, 4)
                 }
@@ -540,31 +547,77 @@ struct CreateReminderView: View {
     }
     
     var daysOfTheWeekSection: some View {
-        HStack(spacing: 8) {
-            ForEach(Locale.autoupdatingCurrent.orderedWeekdays, id: \.self) { weekday in
-                let isSelected = userInput.isSelected(day: weekday)
-                
-                Button {
-                    if isSelected {
-                        userInput.selectedDays.remove(weekday)
-                    } else {
-                        userInput.selectedDays.insert(weekday)
+        VStack(alignment: .leading, spacing: 8) {
+            // Display selected days as a compact text
+            if userInput.selectedDays.isEmpty {
+                Text("No days selected")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.blue.opacity(0.6))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.gray.opacity(0.1))
+                    )
+            } else {
+                Text(selectedDaysText)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.accentColor.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+            }
+            
+            // Compact day selection buttons
+            HStack(spacing: 6) {
+                ForEach(Locale.autoupdatingCurrent.orderedWeekdays, id: \.self) { weekday in
+                    let isSelected = userInput.isSelected(day: weekday)
+                    
+                    Button {
+                        if isSelected {
+                            userInput.selectedDays.remove(weekday)
+                        } else {
+                            userInput.selectedDays.insert(weekday)
+                        }
+                    } label: {
+                        Text(String(weekday.rawValue.prefix(1)))
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .frame(width: 24, height: 24)
+                            .background(
+                                Circle()
+                                    .fill(isSelected ? Color.accentColor : Color.clear)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.blue.opacity(isSelected ? 0 : 0.4), lineWidth: 1)
+                                    )
+                            )
+                            .foregroundColor(isSelected ? .white : .primary)
                     }
-                } label: {
-                    Text(weekday.rawValue.localizedUppercase)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule().fill(isSelected ? Color.accentColor : Color.clear)
-                        )
-                        .overlay(
-                            Capsule().stroke(Color.secondary.opacity(isSelected ? 0 : 0.3), lineWidth: 1)
-                        )
-                        .foregroundColor(isSelected ? .white : .primary)
                 }
             }
+        }
+    }
+    
+    private var selectedDaysText: String {
+        let sortedDays = userInput.selectedDays.sorted { day1, day2 in
+            let weekdays = Locale.autoupdatingCurrent.orderedWeekdays
+            return weekdays.firstIndex(of: day1)! < weekdays.firstIndex(of: day2)!
+        }
+        
+        if sortedDays.count <= 3 {
+            return sortedDays.map { $0.rawValue.localizedUppercase }.joined(separator: ", ")
+        } else {
+            let firstDay = sortedDays.first!.rawValue.localizedUppercase
+            let lastDay = sortedDays.last!.rawValue.localizedUppercase
+            return "\(firstDay) - \(lastDay) (\(sortedDays.count) days)"
         }
     }
     
@@ -677,7 +730,7 @@ struct RemindersListView: View {
                     
                     Text("Create your first alarm note - it will actually ring when it's time")
                         .font(.body)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.blue.opacity(0.7))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                 }
@@ -879,6 +932,18 @@ struct OnboardingPageView: View {
             Spacer()
         }
         .padding(.horizontal, 24)
+    }
+}
+
+// Helper to apply a tab badge only when count > 0
+private extension View {
+    @ViewBuilder
+    func tabBadge(_ count: Int) -> some View {
+        if count > 0 {
+            self.badge(count)
+        } else {
+            self
+        }
     }
 }
 
