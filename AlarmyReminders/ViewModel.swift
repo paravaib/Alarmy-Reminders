@@ -71,7 +71,7 @@ import AppIntents
             let remoteAlarms = try alarmManager.alarms
             updateAlarmState(with: remoteAlarms)
         } catch {
-            print("Error fetching alarms: \(error)")
+            // Handle error silently
         }
     }
     
@@ -148,7 +148,6 @@ import AppIntents
         Task {
             do {
                 guard await requestAuthorization() else {
-                    print("Not authorized to schedule alarms.")
                     return
                 }
                 let alarm = try await alarmManager.schedule(id: id, configuration: alarmConfiguration)
@@ -164,7 +163,7 @@ import AppIntents
                     UserDefaults.standard.set(maxAlarmsEverCreated, forKey: "maxAlarmsEverCreated")
                 }
             } catch {
-                print("Error encountered when scheduling alarm: \(error)")
+                // Handle error silently
             }
         }
     }
@@ -173,9 +172,7 @@ import AppIntents
         // Cancel at AlarmKit level first
         do {
             try alarmManager.cancel(id: alarmID)
-            print("✅ Successfully cancelled alarm \(alarmID) at AlarmKit level")
         } catch {
-            print("❌ Error cancelling alarm \(alarmID) at AlarmKit level: \(error)")
             return // Don't update local state if AlarmKit cancellation failed
         }
         
@@ -184,7 +181,6 @@ import AppIntents
             alarmsMap[alarmID] = nil
             // Clean up the stored label
             removeStoredAlarmLabel(alarmID)
-            print("✅ Removed alarm \(alarmID) from local state")
         }
     }
     
@@ -192,7 +188,6 @@ import AppIntents
         // Cancel everything known to AlarmManager, then clear local state.
         do {
             let existing = try alarmManager.alarms
-            print("🔄 Found \(existing.count) alarms to cancel at AlarmKit level")
             
             var successCount = 0
             var failureCount = 0
@@ -201,14 +196,10 @@ import AppIntents
                 do {
                     try alarmManager.cancel(id: alarm.id)
                     successCount += 1
-                    print("✅ Successfully cancelled alarm \(alarm.id) at AlarmKit level")
                 } catch {
                     failureCount += 1
-                    print("❌ Error cancelling alarm \(alarm.id) at AlarmKit level: \(error)")
                 }
             }
-            
-            print("📊 AlarmKit cancellation summary: \(successCount) successful, \(failureCount) failed")
             
             // Only clear local state if we had some successful cancellations
             if successCount > 0 {
@@ -216,11 +207,10 @@ import AppIntents
                     // Clean up all stored labels before clearing the map
                     alarmsMap.keys.forEach { removeStoredAlarmLabel($0) }
                     alarmsMap.removeAll()
-                    print("✅ Cleared all alarms from local state")
                 }
             }
         } catch {
-            print("❌ Error fetching alarms for bulk cancel: \(error)")
+            // Handle error silently
         }
     }
     
@@ -301,7 +291,6 @@ import AppIntents
                 let state = try await alarmManager.requestAuthorization()
                 return state == .authorized
             } catch {
-                print("Error occurred while requesting authorization: \(error)")
                 return false
             }
         case .denied: return false
@@ -353,7 +342,6 @@ import AppIntents
         lastResetDate = Date()
         UserDefaults.standard.set(Date(), forKey: "lastResetDate")
         
-        print("✅ Reset to free tier - Subscription: \(isSubscribed), Max alarms: \(maxAlarmsEverCreated)")
     }
     
     private func storeAlarmLabel(_ alarmId: UUID, label: String) {

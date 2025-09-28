@@ -38,11 +38,8 @@ struct ContentView: View {
                     showingOnboarding = true
                 }
             }
-            
-            // TEMPORARY: Reset to free tier on app launch
-            viewModel.resetToFreeTier()
         }
-        .tint(.accent)
+        .tint(.accentColor)
         .toolbarBackground(.visible, for: .tabBar)
         .onTapGesture {
             hideKeyboard()
@@ -134,10 +131,10 @@ struct AlarmCell: View {
                         HStack(spacing: 6) {
                             Image(systemName: "repeat")
                                 .font(.caption)
-                                .foregroundStyle(.accent)
+                                .foregroundStyle(.tint)
                             Text("Repeats")
                                 .font(.caption)
-                                .foregroundStyle(.accent)
+                                .foregroundStyle(.tint)
                         }
                     }
                     
@@ -183,12 +180,6 @@ struct AlarmCell: View {
             Text("Are you sure you want to delete this reminder?")
         }
         .accessibilityHint("Swipe left for actions or use the buttons on the right.")
-    }
-    
-    var statusIcon: some View {
-        Image(systemName: statusIconName)
-            .font(.title2)
-            .foregroundStyle(statusColor)
     }
     
     var statusTag: some View {
@@ -404,7 +395,11 @@ struct CreateReminderView: View {
                     Menu {
                         Button("Rate This App") {
                             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                                SKStoreReviewController.requestReview(in: windowScene)
+                                if #available(iOS 18.0, *) {
+                                    AppStore.requestReview(in: windowScene)
+                                } else {
+                                    SKStoreReviewController.requestReview(in: windowScene)
+                                }
                             }
                         }
                         
@@ -439,7 +434,7 @@ struct CreateReminderView: View {
             HStack {
                 Image(systemName: "alarm.fill")
                     .font(.title2)
-                    .foregroundStyle(.accent)
+                    .foregroundStyle(.tint)
                 Text("Create Your Alarm Note")
                     .font(.title2)
                     .fontWeight(.semibold)
@@ -499,7 +494,7 @@ struct CreateReminderView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "text.bubble")
-                    .foregroundStyle(.accent)
+                    .foregroundStyle(.tint)
                 Text("Your Note")
                     .font(.headline)
                     .fontWeight(.medium)
@@ -537,7 +532,7 @@ struct CreateReminderView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "clock")
-                    .foregroundStyle(.accent)
+                    .foregroundStyle(.tint)
                 Text("Schedule Time")
                     .font(.headline)
                     .fontWeight(.medium)
@@ -614,7 +609,7 @@ struct CreateReminderView: View {
                     // Show info about one-time scheduling
                     HStack(spacing: 8) {
                         Image(systemName: "info.circle")
-                            .foregroundStyle(.accent)
+                            .foregroundStyle(.tint)
                             .font(.caption)
                         Text("This will be a one-time alarm")
                             .font(.caption)
@@ -744,8 +739,8 @@ struct CreateReminderView: View {
             .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(showingSuccess ? .green : .accent)
-                    .shadow(color: showingSuccess ? .green.opacity(0.3) : .accent.opacity(0.3), radius: 8, x: 0, y: 4)
+                    .fill(showingSuccess ? .green : Color.accentColor)
+                    .shadow(color: showingSuccess ? .green.opacity(0.3) : Color.accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
             )
         }
         .buttonStyle(.plain)
@@ -872,7 +867,7 @@ struct RemindersListView: View {
                     .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(.accent)
+                            .fill(Color.accentColor)
                     )
                 }
             }
@@ -944,7 +939,7 @@ struct OnboardingView: View {
     ]
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Page content
                 TabView(selection: $currentPage) {
@@ -962,7 +957,7 @@ struct OnboardingView: View {
                     HStack(spacing: 8) {
                         ForEach(0..<pages.count, id: \.self) { index in
                             Circle()
-                                .fill(index == currentPage ? .accent : .secondary.opacity(0.3))
+                                .fill(index == currentPage ? Color.accentColor : .secondary.opacity(0.3))
                                 .frame(width: 8, height: 8)
                                 .animation(.easeInOut, value: currentPage)
                         }
@@ -1014,7 +1009,6 @@ struct OnboardingView: View {
     
     private func markOnboardingComplete() {
         UserDefaults.standard.set(true, forKey: hasSeenOnboardingKey)
-        print("✅ Onboarding marked as complete")
     }
 }
 
@@ -1032,10 +1026,18 @@ struct OnboardingPageView: View {
             Spacer()
             
             // Icon
-            Image(systemName: page.icon)
-                .font(.system(size: 80))
-                .foregroundStyle(.accent)
-                .symbolEffect(.bounce, value: page.icon)
+            Group {
+                if #available(iOS 17.0, *) {
+                    Image(systemName: page.icon)
+                        .font(.system(size: 80))
+                        .foregroundStyle(.tint)
+                        .symbolEffect(.bounce, value: page.icon)
+                } else {
+                    Image(systemName: page.icon)
+                        .font(.system(size: 80))
+                        .foregroundStyle(.tint)
+                }
+            }
             
             // Content
             VStack(spacing: 16) {
@@ -1122,14 +1124,22 @@ struct PaywallView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 0) {
                 // Header
                 VStack(spacing: 16) {
-                    Image(systemName: "alarm.fill")
-                        .font(.system(size: 60))
-                        .foregroundStyle(.accent)
-                        .symbolEffect(.bounce, value: selectedPlan)
+                    Group {
+                        if #available(iOS 17.0, *) {
+                            Image(systemName: "alarm.fill")
+                                .font(.system(size: 60))
+                                .foregroundStyle(.tint)
+                                .symbolEffect(.bounce, value: selectedPlan)
+                        } else {
+                            Image(systemName: "alarm.fill")
+                                .font(.system(size: 60))
+                                .foregroundStyle(.tint)
+                        }
+                    }
                     
                     Text("Unlock Unlimited\nAlarms")
                         .font(.largeTitle)
@@ -1192,7 +1202,7 @@ struct PaywallView: View {
                     .padding(.vertical, 16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(isPurchasing ? .gray : .accent)
+                            .fill(isPurchasing ? .gray : Color.accentColor)
                     )
                 }
                 .disabled(isPurchasing)
@@ -1244,15 +1254,11 @@ struct PaywallView: View {
         
         do {
             // Use StoreKit 2 for real purchase
-            print("🔍 Attempting to load product: \(selectedPlan.productID)")
             let result = try await Product.products(for: [selectedPlan.productID])
-            print("🔍 Products loaded: \(result.count) products found")
             
             guard let product = result.first else {
-                print("❌ Product not found: \(selectedPlan.productID)")
                 throw PurchaseError.productNotFound
             }
-            print("✅ Product found: \(product.displayName) - \(product.displayPrice)")
             
             let purchaseResult = try await product.purchase()
             
@@ -1315,7 +1321,7 @@ struct FeatureRow: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundStyle(.accent)
+                .foregroundStyle(.tint)
                 .frame(width: 30)
             
             VStack(alignment: .leading, spacing: 4) {
@@ -1343,10 +1349,10 @@ struct PricingOptionView: View {
             HStack(spacing: 12) {
                 // Selection indicator
                 Circle()
-                    .fill(isSelected ? .accent : Color(.separator))
+                    .fill(isSelected ? Color.accentColor : Color(.separator))
                     .overlay(
                         Circle()
-                            .stroke(.accent, lineWidth: 2)
+                            .stroke(Color.accentColor, lineWidth: 2)
                             .opacity(isSelected ? 1 : 0)
                     )
                     .overlay(
@@ -1403,7 +1409,7 @@ struct PricingOptionView: View {
                     .fill(isSelected ? Color.accentColor.opacity(0.1) : Color(.secondarySystemGroupedBackground))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? .accent : Color(.separator), lineWidth: isSelected ? 2 : 1)
+                            .stroke(isSelected ? Color.accentColor : Color(.separator), lineWidth: isSelected ? 2 : 1)
                     )
             )
         }
@@ -1424,7 +1430,7 @@ struct HelpView: View {
                     VStack(spacing: 12) {
                         Image(systemName: "questionmark.circle.fill")
                             .font(.system(size: 50))
-                            .foregroundStyle(.accent)
+                            .foregroundStyle(.tint)
                         
                         Text("Help & Support")
                             .font(.title2)
@@ -1475,7 +1481,7 @@ struct HelpView: View {
                         
                         Text("vaibhav@aayutech.in")
                             .font(.subheadline)
-                            .foregroundStyle(.accent)
+                            .foregroundStyle(.tint)
                             .textSelection(.enabled)
                     }
                     .padding(.horizontal, 20)
@@ -1502,10 +1508,14 @@ struct HelpView: View {
         .sheet(isPresented: $showingMailComposer) {
             MailComposerView()
         }
-        .onChange(of: showingRateApp) { _, newValue in
-            if newValue {
+        .onChange(of: showingRateApp) {
+            if showingRateApp {
                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                    SKStoreReviewController.requestReview(in: windowScene)
+                    if #available(iOS 18.0, *) {
+                        AppStore.requestReview(in: windowScene)
+                    } else {
+                        SKStoreReviewController.requestReview(in: windowScene)
+                    }
                 }
                 showingRateApp = false
             }
@@ -1524,7 +1534,7 @@ struct HelpButton: View {
             HStack(spacing: 16) {
                 Image(systemName: icon)
                     .font(.title2)
-                    .foregroundStyle(.accent)
+                    .foregroundStyle(.tint)
                     .frame(width: 30)
                 
                 VStack(alignment: .leading, spacing: 4) {

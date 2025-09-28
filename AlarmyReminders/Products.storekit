@@ -34,7 +34,16 @@
     {
       "id" : "8585F0EF",
       "localizations" : [
-
+        {
+          "description" : "Gives you unlimited alarm creations.",
+          "displayName" : "Monthly Pro",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Gives you unlimited alarm creations.",
+          "displayName" : "Yearly Pro",
+          "locale" : "en_US"
+        }
       ],
       "name" : "alarmyreminders_pro",
       "subscriptions" : [
