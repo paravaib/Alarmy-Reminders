@@ -20,6 +20,7 @@
 		14BEA0F22DBDA40F00D885CD /* AlarmForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14BEA0F12DBDA40F00D885CD /* AlarmForm.swift */; };
 		14BEA0F42DBDA9D600D885CD /* AlarmMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14BEA0F32DBDA9D600D885CD /* AlarmMetadata.swift */; };
 		14BEA0F52DBDA9D600D885CD /* AlarmMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14BEA0F32DBDA9D600D885CD /* AlarmMetadata.swift */; };
+		E70563D12E8912EC00815063 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = E70563D02E8912EC00815063 /* Products.storekit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +62,7 @@
 		141FFBC42DB201A5001A403C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		14BEA0F12DBDA40F00D885CD /* AlarmForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmForm.swift; sourceTree = "<group>"; };
 		14BEA0F32DBDA9D600D885CD /* AlarmMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmMetadata.swift; sourceTree = "<group>"; };
+		E70563D02E8912EC00815063 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -86,6 +88,7 @@
 			children = (
 				141FFB9B2DB1E1CD001A403C /* AlarmyReminders */,
 				141FFBC52DB201A5001A403C /* AlarmyRemindersLiveActivity */,
+				E705635D2E8900D300815063 /* Frameworks */,
 				141FFB792DB1DF49001A403C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -110,6 +113,7 @@
 				141FFB992DB1E1CD001A403C /* ContentView.swift */,
 				141FFB9A2DB1E1CD001A403C /* ViewModel.swift */,
 				141FFBA12DB1E1E2001A403C /* Info.plist */,
+				E70563D02E8912EC00815063 /* Products.storekit */,
 			);
 			path = AlarmyReminders;
 			sourceTree = "<group>";
@@ -123,6 +127,13 @@
 				141FFBC42DB201A5001A403C /* Info.plist */,
 			);
 			path = AlarmyRemindersLiveActivity;
+			sourceTree = "<group>";
+		};
+		E705635D2E8900D300815063 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -207,6 +218,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E70563D12E8912EC00815063 /* Products.storekit in Resources */,
 				141FFBA02DB1E1CD001A403C /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

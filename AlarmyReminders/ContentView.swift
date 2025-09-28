@@ -1,5 +1,6 @@
 import AlarmKit
 import SwiftUI
+import StoreKit
 
 struct ContentView: View {
     @State private var viewModel = ViewModel()
@@ -36,6 +37,9 @@ struct ContentView: View {
                     showingOnboarding = true
                 }
             }
+            
+            // TEMPORARY: Reset to free tier on app launch
+            viewModel.resetToFreeTier()
         }
         .tint(.accent)
         .toolbarBackground(.visible, for: .tabBar)
@@ -421,6 +425,7 @@ struct CreateReminderView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
                 Spacer()
+                PlanStatusIndicator()
                 
                 // Premium button or subscription status indicator
                 if !viewModel.isSubscribed {
@@ -754,6 +759,14 @@ struct RemindersListView: View {
                 
                 ScrollView {
                     VStack(spacing: 16) {
+                        // Plan status at the top
+                        HStack {
+                            Spacer()
+                            PlanStatusIndicator()
+                            Spacer()
+                        }
+                        .padding(.top, 8)
+                        
                         if viewModel.hasUpcomingAlerts {
                             LazyVStack(spacing: 16) {
                                 ForEach(Array(viewModel.alarmsMap.values), id: \.0.id) { (alarm, label) in
@@ -1053,11 +1066,22 @@ extension View {
 
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(ViewModel.self) private var viewModel
     @State private var selectedPlan: SubscriptionPlan = .monthly
+    @State private var isPurchasing = false
+    @State private var purchaseError: String?
+    @State private var showingPurchaseConfirmation = false
     
     enum SubscriptionPlan: String, CaseIterable {
         case monthly = "Monthly"
         case yearly = "Yearly"
+        
+        var productID: String {
+            switch self {
+            case .monthly: return "com.alarmyreminders.monthly"
+            case .yearly: return "com.alarmyreminders.yearly"
+            }
+        }
         
         var price: String {
             switch self {
@@ -1130,12 +1154,17 @@ struct PaywallView: View {
                 
                 // Purchase Button
                 Button(action: {
-                    // Handle purchase
-                    handlePurchase()
+                    showingPurchaseConfirmation = true
                 }) {
                     HStack(spacing: 8) {
-                        Image(systemName: "crown.fill")
-                        Text("Start \(selectedPlan.rawValue) Plan")
+                        if isPurchasing {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "crown.fill")
+                        }
+                        Text(isPurchasing ? "Processing..." : "Continue with \(selectedPlan.rawValue)")
                     }
                     .font(.headline)
                     .fontWeight(.semibold)
@@ -1144,9 +1173,10 @@ struct PaywallView: View {
                     .padding(.vertical, 16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(.accent)
+                            .fill(isPurchasing ? .gray : .accent)
                     )
                 }
+                .disabled(isPurchasing)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 8)
                 
@@ -1166,12 +1196,94 @@ struct PaywallView: View {
                     }
                 }
             }
+            .alert("Purchase Error", isPresented: Binding<Bool>(
+                get: { purchaseError != nil },
+                set: { _ in purchaseError = nil }
+            )) {
+                Button("OK") {
+                    purchaseError = nil
+                }
+            } message: {
+                Text(purchaseError ?? "")
+            }
+            .confirmationDialog("Confirm Subscription", isPresented: $showingPurchaseConfirmation) {
+                Button("Subscribe to \(selectedPlan.rawValue) - \(selectedPlan.price)", role: .destructive) {
+                    Task {
+                        await handlePurchase()
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("You're about to subscribe to the \(selectedPlan.rawValue.lowercased()) plan for \(selectedPlan.price).\n\nThis subscription will auto-renew unless cancelled at least 24 hours before the end of the current period.")
+            }
         }
     }
     
-    private func handlePurchase() {
-        // TODO: Implement StoreKit purchase logic
-        print("Purchasing \(selectedPlan.rawValue) plan")
+    private func handlePurchase() async {
+        isPurchasing = true
+        purchaseError = nil
+        
+        do {
+            // Use StoreKit 2 for real purchase
+            print("🔍 Attempting to load product: \(selectedPlan.productID)")
+            let result = try await Product.products(for: [selectedPlan.productID])
+            print("🔍 Products loaded: \(result.count) products found")
+            
+            guard let product = result.first else {
+                print("❌ Product not found: \(selectedPlan.productID)")
+                throw PurchaseError.productNotFound
+            }
+            print("✅ Product found: \(product.displayName) - \(product.displayPrice)")
+            
+            let purchaseResult = try await product.purchase()
+            
+            switch purchaseResult {
+            case .success(let verification):
+                switch verification {
+                case .verified(let transaction):
+                    // Transaction is verified, update subscription status
+                    await transaction.finish()
+                    viewModel.updateSubscriptionStatus(true)
+                    dismiss()
+                case .unverified(_, let error):
+                    throw PurchaseError.unverifiedTransaction(error)
+                }
+            case .userCancelled:
+                // User cancelled, no error needed
+                break
+            case .pending:
+                // Transaction is pending (e.g., waiting for parental approval)
+                purchaseError = "Purchase is pending approval."
+            @unknown default:
+                throw PurchaseError.unknownResult
+            }
+            
+        } catch {
+            if let purchaseErr = error as? PurchaseError {
+                self.purchaseError = purchaseErr.localizedDescription
+            } else {
+                self.purchaseError = "Purchase failed: \(error.localizedDescription)"
+            }
+        }
+        
+        isPurchasing = false
+    }
+    
+    enum PurchaseError: LocalizedError {
+        case productNotFound
+        case unverifiedTransaction(Error)
+        case unknownResult
+        
+        var errorDescription: String? {
+            switch self {
+            case .productNotFound:
+                return "Product not found. Please try again."
+            case .unverifiedTransaction(let error):
+                return "Transaction verification failed: \(error.localizedDescription)"
+            case .unknownResult:
+                return "Unknown purchase result. Please try again."
+            }
+        }
     }
 }
 
@@ -1277,6 +1389,14 @@ struct PricingOptionView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct PlanStatusIndicator: View {
+    @Environment(ViewModel.self) private var viewModel
+    
+    var body: some View {
+        Text(viewModel.isSubscribed ? "PRO" : "FREE")
     }
 }
 

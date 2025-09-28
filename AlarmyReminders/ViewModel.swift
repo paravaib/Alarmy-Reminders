@@ -57,6 +57,9 @@ import AppIntents
             lastResetDate = savedDate
         }
         
+        // Load subscription status
+        isSubscribed = UserDefaults.standard.bool(forKey: "isSubscribed")
+        
         // Check if we need to reset (this will be called automatically)
         checkAndResetIfNeeded()
         
@@ -330,6 +333,27 @@ import AppIntents
             UserDefaults.standard.set(maxAlarmsEverCreated, forKey: "maxAlarmsEverCreated")
             UserDefaults.standard.set(lastResetDate, forKey: "lastResetDate")
         }
+    }
+    
+    @MainActor     func updateSubscriptionStatus(_ subscribed: Bool) {
+        isSubscribed = subscribed
+        UserDefaults.standard.set(subscribed, forKey: "isSubscribed")
+    }
+    
+    @MainActor func resetToFreeTier() {
+        // Reset subscription status
+        isSubscribed = false
+        UserDefaults.standard.set(false, forKey: "isSubscribed")
+        
+        // Reset alarm counter
+        maxAlarmsEverCreated = 0
+        UserDefaults.standard.set(0, forKey: "maxAlarmsEverCreated")
+        
+        // Reset last reset date to today
+        lastResetDate = Date()
+        UserDefaults.standard.set(Date(), forKey: "lastResetDate")
+        
+        print("✅ Reset to free tier - Subscription: \(isSubscribed), Max alarms: \(maxAlarmsEverCreated)")
     }
     
     private func storeAlarmLabel(_ alarmId: UUID, label: String) {
