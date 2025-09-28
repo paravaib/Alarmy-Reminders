@@ -344,6 +344,7 @@ struct AlarmCell: View {
 struct CreateReminderView: View {
     @Environment(ViewModel.self) private var viewModel
     @State private var showingOnboarding = false
+    @State private var showingPaywall = false
     
     @State private var userInput = AlarmForm()
     @State private var showingSuccess = false
@@ -405,6 +406,9 @@ struct CreateReminderView: View {
         .sheet(isPresented: $showingOnboarding) {
             OnboardingView()
         }
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView()
+        }
     }
     
     var headerSection: some View {
@@ -417,12 +421,52 @@ struct CreateReminderView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
                 Spacer()
+                
+                // Premium button or subscription status indicator
+                if !viewModel.isSubscribed {
+                    Button(action: {
+                        showingPaywall = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Text("\(viewModel.currentAlarmUsage)/\(viewModel.freeAlarmLimit)")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                            Image(systemName: "crown.fill")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(.orange)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             
             Text("Create notes with actual alarm notifications - never miss anything again")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.leading)
+            
+            // Daily reset message
+            if !viewModel.isSubscribed && viewModel.hasReachedAlarmLimit {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.caption2)
+                    Text("Resets in \(viewModel.timeUntilReset)")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(Color(.tertiarySystemFill))
+                )
+            }
         }
         .padding(.horizontal, 4)
     }
@@ -635,6 +679,12 @@ struct CreateReminderView: View {
     
     var createButton: some View {
         Button {
+            // Check if user can create more alarms
+            if viewModel.hasReachedAlarmLimit {
+                showingPaywall = true
+                return
+            }
+            
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                 showingSuccess = true
             }
@@ -661,7 +711,7 @@ struct CreateReminderView: View {
                         .foregroundStyle(.white)
                 }
                 
-                Text(showingSuccess ? "Alarm Note Created!" : "Create Alarm Note")
+                Text(buttonText)
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
@@ -677,6 +727,16 @@ struct CreateReminderView: View {
         .buttonStyle(.plain)
         .disabled(!userInput.isValidAlarm)
         .scaleEffect(showingSuccess ? 1.05 : 1.0)
+    }
+    
+    private var buttonText: String {
+        if showingSuccess {
+            return "Alarm Note Created!"
+        } else if viewModel.hasReachedAlarmLimit {
+            return "Upgrade to Create More"
+        } else {
+            return "Create Alarm Note"
+        }
     }
 }
 
@@ -988,6 +1048,235 @@ extension View {
         self.onTapGesture {
             hideKeyboard()
         }
+    }
+}
+
+struct PaywallView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedPlan: SubscriptionPlan = .monthly
+    
+    enum SubscriptionPlan: String, CaseIterable {
+        case monthly = "Monthly"
+        case yearly = "Yearly"
+        
+        var price: String {
+            switch self {
+            case .monthly: return "$1.99/month"
+            case .yearly: return "$14.99/year"
+            }
+        }
+        
+        var savings: String? {
+            switch self {
+            case .monthly: return nil
+            case .yearly: return "Save 37%"
+            }
+        }
+        
+        var isBestValue: Bool {
+            self == .yearly
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 16) {
+                    Image(systemName: "alarm.fill")
+                        .font(.system(size: 60))
+                        .foregroundStyle(.accent)
+                        .symbolEffect(.bounce, value: selectedPlan)
+                    
+                    Text("Unlock Unlimited\nAlarms")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
+                    
+                    Text("Never miss anything important again")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 40)
+                .padding(.horizontal, 24)
+                
+                Spacer()
+                
+                // Features
+                VStack(spacing: 20) {
+                    FeatureRow(icon: "infinity", title: "Unlimited Alarms", description: "Create as many reminders as you need")
+                    FeatureRow(icon: "headphones", title: "Priority Support", description: "Get help when you need it most")
+                }
+                .padding(.horizontal, 24)
+                
+                Spacer()
+                
+                // Pricing Options
+                VStack(spacing: 16) {
+                    Text("Choose Your Plan")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    
+                    ForEach(SubscriptionPlan.allCases, id: \.self) { plan in
+                        PricingOptionView(
+                            plan: plan,
+                            isSelected: selectedPlan == plan,
+                            onTap: { selectedPlan = plan }
+                        )
+                    }
+                }
+                .padding(.horizontal, 24)
+                
+                // Purchase Button
+                Button(action: {
+                    // Handle purchase
+                    handlePurchase()
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "crown.fill")
+                        Text("Start \(selectedPlan.rawValue) Plan")
+                    }
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.accent)
+                    )
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 8)
+                
+                // Free Trial Text
+                Text("Cancel anytime. No commitment.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 8)
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func handlePurchase() {
+        // TODO: Implement StoreKit purchase logic
+        print("Purchasing \(selectedPlan.rawValue) plan")
+    }
+}
+
+struct FeatureRow: View {
+    let icon: String
+    let title: String
+    let description: String
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundStyle(.accent)
+                .frame(width: 30)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .fontWeight(.medium)
+                
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+        }
+    }
+}
+
+struct PricingOptionView: View {
+    let plan: PaywallView.SubscriptionPlan
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                // Selection indicator
+                Circle()
+                    .fill(isSelected ? .accent : Color(.separator))
+                    .overlay(
+                        Circle()
+                            .stroke(.accent, lineWidth: 2)
+                            .opacity(isSelected ? 1 : 0)
+                    )
+                    .overlay(
+                        Circle()
+                            .fill(.white)
+                            .frame(width: 8, height: 8)
+                            .opacity(isSelected ? 1 : 0)
+                    )
+                    .frame(width: 20, height: 20)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(plan.rawValue)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        
+                        if let savings = plan.savings {
+                            Text(savings)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(.orange)
+                                )
+                        }
+                        
+                        if plan.isBestValue {
+                            Text("BEST VALUE")
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(.green)
+                                )
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    Text(plan.price)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? Color.accentColor.opacity(0.1) : Color(.secondarySystemGroupedBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isSelected ? .accent : Color(.separator), lineWidth: isSelected ? 2 : 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 

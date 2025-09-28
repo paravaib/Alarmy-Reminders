@@ -9,11 +9,57 @@ import AppIntents
     @MainActor var alarmsMap = AlarmsMap()
     @ObservationIgnored private let alarmManager = AlarmManager.shared
     
+    // Subscription status
+    @MainActor var isSubscribed = false
+    @MainActor var freeAlarmLimit = 3
+    @MainActor var maxAlarmsEverCreated = 0
+    @MainActor var lastResetDate = Date()
+    
     @MainActor var hasUpcomingAlerts: Bool {
         !alarmsMap.isEmpty
     }
     
-    init() {
+    @MainActor var canCreateMoreAlarms: Bool {
+        isSubscribed || maxAlarmsEverCreated < freeAlarmLimit
+    }
+    
+    @MainActor var hasReachedAlarmLimit: Bool {
+        !isSubscribed && maxAlarmsEverCreated >= freeAlarmLimit
+    }
+    
+    @MainActor var currentAlarmUsage: Int {
+        checkAndResetIfNeeded()
+        return max(maxAlarmsEverCreated, alarmsMap.count)
+    }
+    
+    @MainActor var timeUntilReset: String {
+        let calendar = Calendar.current
+        let now = Date()
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
+        
+        let remainingSeconds = Int(tomorrow.timeIntervalSince(now))
+        let hours = remainingSeconds / 3600
+        let minutes = (remainingSeconds % 3600) / 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+    
+    @MainActor init() {
+        // Load the maximum alarms ever created from UserDefaults
+        maxAlarmsEverCreated = UserDefaults.standard.integer(forKey: "maxAlarmsEverCreated")
+        
+        // Load the last reset date
+        if let savedDate = UserDefaults.standard.object(forKey: "lastResetDate") as? Date {
+            lastResetDate = savedDate
+        }
+        
+        // Check if we need to reset (this will be called automatically)
+        checkAndResetIfNeeded()
+        
         observeAlarms()
     }
     
@@ -105,10 +151,14 @@ import AppIntents
                 let alarm = try await alarmManager.schedule(id: id, configuration: alarmConfiguration)
                 await MainActor.run {
                     alarmsMap[id] = (alarm, label)
+                    // Track maximum alarms ever created
+                    maxAlarmsEverCreated = max(maxAlarmsEverCreated, alarmsMap.count)
                     // Store the label persistently so we can retrieve it after app restart
                     // Convert LocalizedStringResource to String for storage
                     let labelString = String(localized: label)
                     storeAlarmLabel(id, label: labelString)
+                    // Store the max alarm count persistently
+                    UserDefaults.standard.set(maxAlarmsEverCreated, forKey: "maxAlarmsEverCreated")
                 }
             } catch {
                 print("Error encountered when scheduling alarm: \(error)")
@@ -266,6 +316,20 @@ import AppIntents
         
         // If no stored label, provide a more user-friendly default
         return LocalizedStringResource("Alarm Reminder")
+    }
+    
+    @MainActor private func checkAndResetIfNeeded() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let lastResetDay = calendar.startOfDay(for: lastResetDate)
+        
+        // If it's a new day, reset the counter
+        if today > lastResetDay {
+            maxAlarmsEverCreated = 0
+            lastResetDate = today
+            UserDefaults.standard.set(maxAlarmsEverCreated, forKey: "maxAlarmsEverCreated")
+            UserDefaults.standard.set(lastResetDate, forKey: "lastResetDate")
+        }
     }
     
     private func storeAlarmLabel(_ alarmId: UUID, label: String) {
