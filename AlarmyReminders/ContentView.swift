@@ -1,6 +1,7 @@
 import AlarmKit
 import SwiftUI
 import StoreKit
+import MessageUI
 
 struct ContentView: View {
     @State private var viewModel = ViewModel()
@@ -349,6 +350,7 @@ struct CreateReminderView: View {
     @Environment(ViewModel.self) private var viewModel
     @State private var showingOnboarding = false
     @State private var showingPaywall = false
+    @State private var showingHelp = false
     
     @State private var userInput = AlarmForm()
     @State private var showingSuccess = false
@@ -399,8 +401,22 @@ struct CreateReminderView: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingOnboarding = true }) {
-                        Image(systemName: "questionmark.circle")
+                    Menu {
+                        Button("Rate This App") {
+                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                                SKStoreReviewController.requestReview(in: windowScene)
+                            }
+                        }
+                        
+                        Button("Help & Support") {
+                            showingHelp = true
+                        }
+                        
+                        Button("Onboarding") {
+                            showingOnboarding = true
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -412,6 +428,9 @@ struct CreateReminderView: View {
         }
         .sheet(isPresented: $showingPaywall) {
             PaywallView()
+        }
+        .sheet(isPresented: $showingHelp) {
+            HelpView()
         }
     }
     
@@ -1389,6 +1408,180 @@ struct PricingOptionView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct HelpView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var showingMailComposer = false
+    @State private var showingRateApp = false
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(spacing: 12) {
+                        Image(systemName: "questionmark.circle.fill")
+                            .font(.system(size: 50))
+                            .foregroundStyle(.accent)
+                        
+                        Text("Help & Support")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        Text("We're here to help you with any questions or issues")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 20)
+                    
+                    // Contact Section
+                    VStack(spacing: 16) {
+                        Text("Get in Touch")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        VStack(spacing: 12) {
+                            HelpButton(
+                                icon: "envelope.fill",
+                                title: "Report a Bug",
+                                subtitle: "Let us know if you found an issue",
+                                action: { showingMailComposer = true }
+                            )
+                            
+                            HelpButton(
+                                icon: "lightbulb.fill",
+                                title: "Feature Request",
+                                subtitle: "Suggest new features you'd like",
+                                action: { showingMailComposer = true }
+                            )
+                            
+                            HelpButton(
+                                icon: "star.fill",
+                                title: "Rate This App",
+                                subtitle: "Share your experience with others",
+                                action: { showingRateApp = true }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Email Info
+                    VStack(spacing: 8) {
+                        Text("Contact Email")
+                            .font(.headline)
+                        
+                        Text("vaibhav@aayutech.in")
+                            .font(.subheadline)
+                            .foregroundStyle(.accent)
+                            .textSelection(.enabled)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.secondarySystemGroupedBackground))
+                    )
+                    .padding(.horizontal, 20)
+                }
+                .padding(.bottom, 34)
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Help & Support")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingMailComposer) {
+            MailComposerView()
+        }
+        .onChange(of: showingRateApp) { _, newValue in
+            if newValue {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    SKStoreReviewController.requestReview(in: windowScene)
+                }
+                showingRateApp = false
+            }
+        }
+    }
+}
+
+struct HelpButton: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundStyle(.accent)
+                    .frame(width: 30)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct MailComposerView: UIViewControllerRepresentable {
+    @Environment(\.dismiss) private var dismiss
+    
+    func makeUIViewController(context: Context) -> MFMailComposeViewController {
+        let mailComposer = MFMailComposeViewController()
+        mailComposer.mailComposeDelegate = context.coordinator
+        mailComposer.setToRecipients(["vaibhav@aayutech.in"])
+        mailComposer.setSubject("AlarmyReminders - Bug Report / Feature Request")
+        mailComposer.setMessageBody("", isHTML: false)
+        return mailComposer
+    }
+    
+    func updateUIViewController(_ uiViewController: MFMailComposeViewController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, MFMailComposeViewControllerDelegate {
+        let parent: MailComposerView
+        
+        init(_ parent: MailComposerView) {
+            self.parent = parent
+        }
+        
+        func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
+            parent.dismiss()
+        }
     }
 }
 
