@@ -1,6 +1,7 @@
 import AlarmKit
 import SwiftUI
 import AppIntents
+import StoreKit
 
 @Observable class ViewModel {
     typealias AlarmConfiguration = AlarmManager.AlarmConfiguration<ReminderData>
@@ -62,6 +63,11 @@ import AppIntents
         
         // Check if we need to reset (this will be called automatically)
         checkAndResetIfNeeded()
+        
+        // Verify subscription status on app launch
+        Task {
+            await verifySubscriptionStatus()
+        }
         
         observeAlarms()
     }
@@ -342,6 +348,81 @@ import AppIntents
         lastResetDate = Date()
         UserDefaults.standard.set(Date(), forKey: "lastResetDate")
         
+    }
+    
+    @MainActor func verifySubscriptionStatus() async {
+        // This function verifies the current subscription status against StoreKit
+        // and resets it if there's a mismatch
+        do {
+            let productIDs = ["com.alarmyreminders.monthly", "com.alarmyreminders.yearly"]
+            _ = try await Product.products(for: productIDs)
+            
+            var hasActiveSubscription = false
+            
+            for await result in Transaction.currentEntitlements {
+                switch result {
+                case .verified(let transaction):
+                    if productIDs.contains(transaction.productID) {
+                        if transaction.revocationDate == nil && 
+                           (transaction.expirationDate == nil || transaction.expirationDate! > Date()) {
+                            hasActiveSubscription = true
+                            break
+                        }
+                    }
+                case .unverified:
+                    continue
+                }
+            }
+            
+            // Update subscription status to match actual StoreKit state
+            if hasActiveSubscription != isSubscribed {
+                updateSubscriptionStatus(hasActiveSubscription)
+            }
+            
+        } catch {
+            // Handle error silently
+        }
+    }
+    
+    @MainActor func restorePurchases() async -> Bool {
+        do {
+            // Get all subscription products
+            let productIDs = ["com.alarmyreminders.monthly", "com.alarmyreminders.yearly"]
+            _ = try await Product.products(for: productIDs)
+            
+            var hasActiveSubscription = false
+            
+            // Check for active subscriptions
+            for await result in Transaction.currentEntitlements {
+                switch result {
+                case .verified(let transaction):
+                    // Check if this is one of our subscription products
+                    if productIDs.contains(transaction.productID) {
+                        // Check if subscription is still active
+                        if transaction.revocationDate == nil && 
+                           (transaction.expirationDate == nil || transaction.expirationDate! > Date()) {
+                            // User has an active subscription
+                            hasActiveSubscription = true
+                            updateSubscriptionStatus(true)
+                            return true
+                        }
+                    }
+                case .unverified:
+                    continue
+                }
+            }
+            
+            // No active subscriptions found - reset to free tier
+            if !hasActiveSubscription {
+                updateSubscriptionStatus(false)
+            }
+            return hasActiveSubscription
+            
+        } catch {
+            // On error, reset to free tier to be safe
+            updateSubscriptionStatus(false)
+            return false
+        }
     }
     
     private func storeAlarmLabel(_ alarmId: UUID, label: String) {

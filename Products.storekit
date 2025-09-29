@@ -14,7 +14,36 @@
 
   ],
   "products" : [
-
+    {
+      "displayPrice" : "1.99",
+      "familyShareable" : false,
+      "internalID" : "1234567890",
+      "localizations" : [
+        {
+          "description" : "Unlimited alarm reminders",
+          "displayName" : "Monthly Subscription",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.alarmyreminders.monthly",
+      "referenceName" : "Monthly Subscription",
+      "type" : "RecurringSubscription"
+    },
+    {
+      "displayPrice" : "14.99",
+      "familyShareable" : false,
+      "internalID" : "1234567891",
+      "localizations" : [
+        {
+          "description" : "Unlimited alarm reminders with 37% savings",
+          "displayName" : "Yearly Subscription",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.alarmyreminders.yearly",
+      "referenceName" : "Yearly Subscription",
+      "type" : "RecurringSubscription"
+    }
   ],
   "settings" : {
     "_applicationInternalID" : "6753106310",
@@ -34,7 +63,20 @@
     "_timeRate" : 0
   },
   "subscriptionGroups" : [
-
+    {
+      "id" : "21482456",
+      "localizations" : [
+        {
+          "displayName" : "Alarmy Reminders Premium",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "Premium Subscription",
+      "subscriptions" : [
+        "com.alarmyreminders.monthly",
+        "com.alarmyreminders.yearly"
+      ]
+    }
   ],
   "version" : {
     "major" : 4,

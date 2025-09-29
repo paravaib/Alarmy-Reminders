@@ -39,7 +39,7 @@ struct ContentView: View {
                 }
             }
         }
-        .tint(.accentColor)
+        .tint(Color.accentColor)
         .toolbarBackground(.visible, for: .tabBar)
         .onTapGesture {
             hideKeyboard()
@@ -1092,6 +1092,9 @@ struct PaywallView: View {
     @State private var isPurchasing = false
     @State private var purchaseError: String?
     @State private var showingPurchaseConfirmation = false
+    @State private var isRestoring = false
+    @State private var restoreError: String?
+    @State private var showingRestoreSuccess = false
     
     enum SubscriptionPlan: String, CaseIterable {
         case monthly = "Monthly"
@@ -1180,6 +1183,7 @@ struct PaywallView: View {
                     }
                 }
                 .padding(.horizontal, 24)
+                .padding(.bottom, 24)
                 
                 // Purchase Button
                 Button(action: {
@@ -1207,6 +1211,30 @@ struct PaywallView: View {
                 }
                 .disabled(isPurchasing)
                 .padding(.horizontal, 24)
+                .padding(.bottom, 16)
+                
+                // Restore Purchases Button
+                Button(action: {
+                    Task {
+                        await handleRestorePurchases()
+                    }
+                }) {
+                    HStack(spacing: 8) {
+                        if isRestoring {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color.accentColor))
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        Text(isRestoring ? "Restoring..." : "Restore Purchases")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.vertical, 8)
+                }
+                .disabled(isRestoring || isPurchasing)
                 .padding(.bottom, 8)
                 
                 // Free Trial Text
@@ -1225,26 +1253,15 @@ struct PaywallView: View {
                     }
                 }
             }
-            .alert("Purchase Error", isPresented: Binding<Bool>(
-                get: { purchaseError != nil },
-                set: { _ in purchaseError = nil }
-            )) {
-                Button("OK") {
-                    purchaseError = nil
-                }
-            } message: {
-                Text(purchaseError ?? "")
-            }
-            .confirmationDialog("Confirm Subscription", isPresented: $showingPurchaseConfirmation) {
-                Button("Subscribe to \(selectedPlan.rawValue) - \(selectedPlan.price)", role: .destructive) {
-                    Task {
-                        await handlePurchase()
-                    }
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("You're about to subscribe to the \(selectedPlan.rawValue.lowercased()) plan for \(selectedPlan.price).\n\nThis subscription will auto-renew unless cancelled at least 24 hours before the end of the current period.")
-            }
+            .modifier(PaywallViewModifiers(
+                purchaseError: $purchaseError,
+                restoreError: $restoreError,
+                showingRestoreSuccess: $showingRestoreSuccess,
+                showingPurchaseConfirmation: $showingPurchaseConfirmation,
+                selectedPlan: selectedPlan,
+                onPurchase: { await handlePurchase() },
+                onDismiss: { dismiss() }
+            ))
         }
     }
     
@@ -1294,6 +1311,24 @@ struct PaywallView: View {
         isPurchasing = false
     }
     
+    private func handleRestorePurchases() async {
+        await MainActor.run {
+            isRestoring = true
+            restoreError = nil
+        }
+        
+        let success = await viewModel.restorePurchases()
+        
+        await MainActor.run {
+            if success {
+                showingRestoreSuccess = true
+            } else {
+                restoreError = "No previous purchases found to restore."
+            }
+            isRestoring = false
+        }
+    }
+    
     enum PurchaseError: LocalizedError {
         case productNotFound
         case unverifiedTransaction(Error)
@@ -1309,6 +1344,58 @@ struct PaywallView: View {
                 return "Unknown purchase result. Please try again."
             }
         }
+    }
+}
+
+struct PaywallViewModifiers: ViewModifier {
+    @Binding var purchaseError: String?
+    @Binding var restoreError: String?
+    @Binding var showingRestoreSuccess: Bool
+    @Binding var showingPurchaseConfirmation: Bool
+    let selectedPlan: PaywallView.SubscriptionPlan
+    let onPurchase: () async -> Void
+    let onDismiss: () -> Void
+    
+    func body(content: Content) -> some View {
+        content
+            .alert("Purchase Error", isPresented: Binding<Bool>(
+                get: { purchaseError != nil },
+                set: { _ in purchaseError = nil }
+            )) {
+                Button("OK") {
+                    purchaseError = nil
+                }
+            } message: {
+                Text(purchaseError ?? "")
+            }
+            .alert("Restore Purchases", isPresented: Binding<Bool>(
+                get: { restoreError != nil },
+                set: { _ in restoreError = nil }
+            )) {
+                Button("OK") {
+                    restoreError = nil
+                }
+            } message: {
+                Text(restoreError ?? "")
+            }
+            .alert("Purchases Restored", isPresented: $showingRestoreSuccess) {
+                Button("OK") {
+                    showingRestoreSuccess = false
+                    onDismiss()
+                }
+            } message: {
+                Text("Your previous purchases have been successfully restored!")
+            }
+            .confirmationDialog("Confirm Subscription", isPresented: $showingPurchaseConfirmation) {
+                Button("Subscribe to \(selectedPlan.rawValue) - \(selectedPlan.price)", role: .destructive) {
+                    Task {
+                        await onPurchase()
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("You're about to subscribe to the \(selectedPlan.rawValue.lowercased()) plan for \(selectedPlan.price).\n\nThis subscription will auto-renew unless cancelled at least 24 hours before the end of the current period.")
+            }
     }
 }
 
