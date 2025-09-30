@@ -1578,6 +1578,28 @@ struct HelpView: View {
                             .fill(Color(.secondarySystemGroupedBackground))
                     )
                     .padding(.horizontal, 20)
+                    
+                    // Legal Section
+                    VStack(spacing: 16) {
+                        Text("Legal")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        VStack(spacing: 12) {
+                            LegalLinkButton(
+                                icon: "doc.text.fill",
+                                title: "Terms of Use (EULA)",
+                                url: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                            )
+                            
+                            LegalLinkButton(
+                                icon: "hand.raised.fill",
+                                title: "Privacy Policy",
+                                url: "https://paravaib.github.io/Alarmy-Reminders-Legal/privacy-policy.html"
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 20)
                 }
                 .padding(.bottom, 34)
             }
@@ -1637,6 +1659,44 @@ struct HelpButton: View {
                 Spacer()
                 
                 Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.secondarySystemGroupedBackground))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct LegalLinkButton: View {
+    let icon: String
+    let title: String
+    let url: String
+    
+    var body: some View {
+        Button(action: {
+            if let url = URL(string: url) {
+                UIApplication.shared.open(url)
+            }
+        }) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundStyle(.tint)
+                    .frame(width: 30)
+                
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                
+                Spacer()
+                
+                Image(systemName: "arrow.up.right.square")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
