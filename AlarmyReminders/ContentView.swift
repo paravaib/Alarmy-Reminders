@@ -394,12 +394,8 @@ struct CreateReminderView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button("Rate This App") {
-                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                                if #available(iOS 18.0, *) {
-                                    AppStore.requestReview(in: windowScene)
-                                } else {
-                                    SKStoreReviewController.requestReview(in: windowScene)
-                                }
+                            if let url = URL(string: "https://apps.apple.com/app/id6753106310") {
+                                UIApplication.shared.open(url)
                             }
                         }
                         
@@ -422,10 +418,22 @@ struct CreateReminderView: View {
             OnboardingView()
         }
         .sheet(isPresented: $showingPaywall) {
-            PaywallView()
+            PaywallView(isHardPaywall: viewModel.hasReachedAlarmLimit)
         }
         .sheet(isPresented: $showingHelp) {
             HelpView()
+        }
+        .onAppear {
+            // Show paywall automatically if limit is reached
+            if viewModel.hasReachedAlarmLimit {
+                showingPaywall = true
+            }
+        }
+        .onChange(of: viewModel.hasReachedAlarmLimit) { _, hasReachedLimit in
+            // Show paywall when limit is reached
+            if hasReachedLimit {
+                showingPaywall = true
+            }
         }
     }
     
@@ -469,23 +477,6 @@ struct CreateReminderView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.leading)
-            
-            // Daily reset message
-            if !viewModel.isSubscribed && viewModel.hasReachedAlarmLimit {
-                HStack(spacing: 4) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.caption2)
-                    Text("Resets in \(viewModel.timeUntilReset)")
-                        .font(.caption2)
-                }
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill(Color(.tertiarySystemFill))
-                )
-            }
         }
         .padding(.horizontal, 4)
     }
@@ -1088,6 +1079,7 @@ extension View {
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(ViewModel.self) private var viewModel
+    let isHardPaywall: Bool
     @State private var selectedPlan: SubscriptionPlan = .monthly
     @State private var isPurchasing = false
     @State private var purchaseError: String?
@@ -1095,6 +1087,10 @@ struct PaywallView: View {
     @State private var isRestoring = false
     @State private var restoreError: String?
     @State private var showingRestoreSuccess = false
+    
+    init(isHardPaywall: Bool = false) {
+        self.isHardPaywall = isHardPaywall
+    }
     
     enum SubscriptionPlan: String, CaseIterable {
         case monthly = "Monthly"
@@ -1109,15 +1105,15 @@ struct PaywallView: View {
         
         var price: String {
             switch self {
-            case .monthly: return "$1.99/month"
-            case .yearly: return "$14.99/year"
+            case .monthly: return "$20.00/month"
+            case .yearly: return "$149.99/year"
             }
         }
         
         var savings: String? {
             switch self {
             case .monthly: return nil
-            case .yearly: return "Save 37%"
+            case .yearly: return "Save 38%"
             }
         }
         
@@ -1144,15 +1140,22 @@ struct PaywallView: View {
                         }
                     }
                     
-                    Text("Unlock Unlimited\nAlarms")
+                    Text(isHardPaywall ? "Upgrade to Continue" : "Unlock Unlimited Alarms")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 8)
                     
-                    Text("Never miss anything important again")
+                    Text(isHardPaywall ? "You've used all \(viewModel.freeAlarmLimit) free alarms. Subscribe to create unlimited alarms." : "Never miss anything important again")
                         .font(.title3)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
                 }
                 .padding(.top, 40)
                 .padding(.horizontal, 24)
@@ -1248,11 +1251,14 @@ struct PaywallView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Close") {
-                        dismiss()
+                    if !isHardPaywall {
+                        Button("Close") {
+                            dismiss()
+                        }
                     }
                 }
             }
+            .interactiveDismissDisabled(isHardPaywall)
             .modifier(PaywallViewModifiers(
                 purchaseError: $purchaseError,
                 restoreError: $restoreError,
@@ -1286,7 +1292,10 @@ struct PaywallView: View {
                     // Transaction is verified, update subscription status
                     await transaction.finish()
                     viewModel.updateSubscriptionStatus(true)
-                    dismiss()
+                    // Dismiss paywall after subscription is activated
+                    await MainActor.run {
+                        dismiss()
+                    }
                 case .unverified(_, let error):
                     throw PurchaseError.unverifiedTransaction(error)
                 }
@@ -1381,6 +1390,7 @@ struct PaywallViewModifiers: ViewModifier {
             .alert("Purchases Restored", isPresented: $showingRestoreSuccess) {
                 Button("OK") {
                     showingRestoreSuccess = false
+                    // Automatically dismiss paywall when purchase is restored
                     onDismiss()
                 }
             } message: {
@@ -1507,7 +1517,6 @@ struct PricingOptionView: View {
 struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingMailComposer = false
-    @State private var showingRateApp = false
     
     var body: some View {
         NavigationStack {
@@ -1555,7 +1564,11 @@ struct HelpView: View {
                                 icon: "star.fill",
                                 title: "Rate This App",
                                 subtitle: "Share your experience with others",
-                                action: { showingRateApp = true }
+                                action: {
+                                    if let url = URL(string: "https://apps.apple.com/app/id6753106310") {
+                                        UIApplication.shared.open(url)
+                                    }
+                                }
                             )
                         }
                     }
@@ -1616,18 +1629,6 @@ struct HelpView: View {
         }
         .sheet(isPresented: $showingMailComposer) {
             MailComposerView()
-        }
-        .onChange(of: showingRateApp) {
-            if showingRateApp {
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                    if #available(iOS 18.0, *) {
-                        AppStore.requestReview(in: windowScene)
-                    } else {
-                        SKStoreReviewController.requestReview(in: windowScene)
-                    }
-                }
-                showingRateApp = false
-            }
         }
     }
 }

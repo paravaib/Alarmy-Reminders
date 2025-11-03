@@ -14,7 +14,6 @@ import StoreKit
     @MainActor var isSubscribed = false
     @MainActor var freeAlarmLimit = 3
     @MainActor var maxAlarmsEverCreated = 0
-    @MainActor var lastResetDate = Date()
     
     @MainActor var hasUpcomingAlerts: Bool {
         !alarmsMap.isEmpty
@@ -29,40 +28,15 @@ import StoreKit
     }
     
     @MainActor var currentAlarmUsage: Int {
-        checkAndResetIfNeeded()
         return max(maxAlarmsEverCreated, alarmsMap.count)
-    }
-    
-    @MainActor var timeUntilReset: String {
-        let calendar = Calendar.current
-        let now = Date()
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
-        
-        let remainingSeconds = Int(tomorrow.timeIntervalSince(now))
-        let hours = remainingSeconds / 3600
-        let minutes = (remainingSeconds % 3600) / 60
-        
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        } else {
-            return "\(minutes)m"
-        }
     }
     
     @MainActor init() {
         // Load the maximum alarms ever created from UserDefaults
         maxAlarmsEverCreated = UserDefaults.standard.integer(forKey: "maxAlarmsEverCreated")
         
-        // Load the last reset date
-        if let savedDate = UserDefaults.standard.object(forKey: "lastResetDate") as? Date {
-            lastResetDate = savedDate
-        }
-        
         // Load subscription status
         isSubscribed = UserDefaults.standard.bool(forKey: "isSubscribed")
-        
-        // Check if we need to reset (this will be called automatically)
-        checkAndResetIfNeeded()
         
         // Verify subscription status on app launch
         Task {
@@ -316,21 +290,8 @@ import StoreKit
         return LocalizedStringResource("Alarm Reminder")
     }
     
-    @MainActor private func checkAndResetIfNeeded() {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let lastResetDay = calendar.startOfDay(for: lastResetDate)
-        
-        // If it's a new day, reset the counter
-        if today > lastResetDay {
-            maxAlarmsEverCreated = 0
-            lastResetDate = today
-            UserDefaults.standard.set(maxAlarmsEverCreated, forKey: "maxAlarmsEverCreated")
-            UserDefaults.standard.set(lastResetDate, forKey: "lastResetDate")
-        }
-    }
     
-    @MainActor     func updateSubscriptionStatus(_ subscribed: Bool) {
+    @MainActor func updateSubscriptionStatus(_ subscribed: Bool) {
         isSubscribed = subscribed
         UserDefaults.standard.set(subscribed, forKey: "isSubscribed")
     }
@@ -340,14 +301,7 @@ import StoreKit
         isSubscribed = false
         UserDefaults.standard.set(false, forKey: "isSubscribed")
         
-        // Reset alarm counter
-        maxAlarmsEverCreated = 0
-        UserDefaults.standard.set(0, forKey: "maxAlarmsEverCreated")
-        
-        // Reset last reset date to today
-        lastResetDate = Date()
-        UserDefaults.standard.set(Date(), forKey: "lastResetDate")
-        
+        // Note: We no longer reset the alarm counter - it persists until user subscribes
     }
     
     @MainActor func verifySubscriptionStatus() async {
